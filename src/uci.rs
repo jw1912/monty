@@ -51,7 +51,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 pub fn perft(commands: &[&str], pos: &Position) {
     let depth = commands[1].parse().unwrap();
     let now = Instant::now();
-    let count = perft_fn::<true, true>(pos, depth);
+    let count = perft_fn::<false, true>(pos, depth);
     let time = now.elapsed().as_micros();
     println!(
         "perft {depth} time {} nodes {count} ({:.2} Mnps)",

@@ -148,6 +148,52 @@ impl Position {
         0
     }
 
+    #[must_use]
+    pub fn threats(&self) -> u64 {
+        let mut threats = 0;
+
+        let king = self.piece(Piece::KING) & self.boys();
+        let occ = self.occ() ^ king;
+
+        let side = self.stm() ^ 1;
+        let opps = self.bb[side];
+
+        let queens = self.bb[Piece::QUEEN];
+
+        let mut rooks = opps & (self.bb[Piece::ROOK] | queens);
+        while rooks > 0 {
+            pop_lsb!(sq, rooks);
+            threats |= Attacks::rook(sq as usize, occ);
+        }
+
+        let mut bishops = opps & (self.bb[Piece::BISHOP] | queens);
+        while bishops > 0 {
+            pop_lsb!(sq, bishops);
+            threats |= Attacks::bishop(sq as usize, occ);
+        }
+
+        let mut knights = opps & self.bb[Piece::KNIGHT];
+        while knights > 0 {
+            pop_lsb!(sq, knights);
+            threats |= Attacks::knight(sq as usize);
+        }
+
+        let mut kings = opps & self.bb[Piece::KING];
+        while kings > 0 {
+            pop_lsb!(sq, kings);
+            threats |= Attacks::king(sq as usize);
+        }
+
+        let pawns = opps & self.bb[Piece::PAWN];
+        threats |= if side == Side::WHITE {
+            Attacks::white_pawn_setwise(pawns)
+        } else {
+            Attacks::black_pawn_setwise(pawns)
+        };
+
+        threats
+    }
+
     // MODIFY POSITION
 
     pub fn toggle(&mut self, side: usize, piece: usize, bit: u64) {
@@ -258,15 +304,20 @@ impl Position {
             len: 0,
         };
 
-        let checkers = self.checkers();
         let pinned = self.pinned();
         let king_sq = self.king_index();
+        let threats = self.threats();
+        let checkers = if threats & (1 << king_sq) > 0 {
+            self.checkers()
+        } else {
+            0
+        };
 
-        self.king_moves(&mut moves);
+        self.king_moves(&mut moves, threats);
 
         if checkers == 0 {
             self.gen_pnbrq(&mut moves, u64::MAX, u64::MAX, pinned);
-            self.castles(&mut moves, self.occ());
+            self.castles(&mut moves, self.occ(), threats);
         } else if checkers & (checkers - 1) == 0 {
             let checker_sq = checkers.trailing_zeros() as usize;
             let free = IN_BETWEEN[king_sq][checker_sq];
@@ -276,29 +327,21 @@ impl Position {
         moves
     }
 
-    fn king_moves(&self, moves: &mut MoveList) {
+    fn king_moves(&self, moves: &mut MoveList, threats: u64) {
         let king_sq = self.king_index();
-        let attacks = Attacks::king(king_sq);
-        let side = self.stm();
+        let attacks = Attacks::king(king_sq) & !threats;
         let occ = self.occ();
-        let no_king = occ ^ (1 << king_sq);
 
         let mut caps = attacks & self.opps();
         while caps > 0 {
             pop_lsb!(to, caps);
-
-            if !self.is_square_attacked(usize::from(to), side, no_king) {
-                moves.push(king_sq as u8, to, Flag::CAP, Piece::KING);
-            }
+            moves.push(king_sq as u8, to, Flag::CAP, Piece::KING);
         }
 
         let mut quiets = attacks & !occ;
         while quiets > 0 {
             pop_lsb!(to, quiets);
-
-            if !self.is_square_attacked(usize::from(to), side, no_king) {
-                moves.push(king_sq as u8, to, Flag::QUIET, Piece::KING);
-            }
+            moves.push(king_sq as u8, to, Flag::QUIET, Piece::KING);
         }
     }
 
@@ -331,19 +374,19 @@ impl Position {
         self.piece_moves::<{ Piece::QUEEN }>(moves, check_mask, pinned);
     }
 
-    fn castles(&self, moves: &mut MoveList, occ: u64) {
+    fn castles(&self, moves: &mut MoveList, occ: u64, threats: u64) {
         if self.stm() == Side::BLACK {
-            if self.can_castle::<{ Side::BLACK }, 0>(occ, 59, 58) {
+            if self.can_castle::<{ Side::BLACK }, 0>(occ, threats, 59, 58) {
                 moves.push(60, 58, Flag::QS, Piece::KING);
             }
-            if self.can_castle::<{ Side::BLACK }, 1>(occ, 61, 62) {
+            if self.can_castle::<{ Side::BLACK }, 1>(occ, threats, 61, 62) {
                 moves.push(60, 62, Flag::KS, Piece::KING);
             }
         } else {
-            if self.can_castle::<{ Side::WHITE }, 0>(occ, 3, 2) {
+            if self.can_castle::<{ Side::WHITE }, 0>(occ, threats, 3, 2) {
                 moves.push(4, 2, Flag::QS, Piece::KING);
             }
-            if self.can_castle::<{ Side::WHITE }, 1>(occ, 5, 6) {
+            if self.can_castle::<{ Side::WHITE }, 1>(occ, threats, 5, 6) {
                 moves.push(4, 6, Flag::KS, Piece::KING);
             }
         }
@@ -352,13 +395,14 @@ impl Position {
     fn can_castle<const SIDE: usize, const KS: usize>(
         &self,
         occ: u64,
+        threats: u64,
         sq1: usize,
         sq2: usize,
     ) -> bool {
+        let path = (1 << sq1) | (1 << sq2);
         self.rights() & Right::TABLE[SIDE][KS] > 0
             && occ & Path::TABLE[SIDE][KS] == 0
-            && !self.is_square_attacked(sq1, SIDE, occ)
-            && !self.is_square_attacked(sq2, SIDE, occ)
+            && path & threats == 0
     }
 
     #[must_use]

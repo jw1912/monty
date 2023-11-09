@@ -83,6 +83,14 @@ impl Attacks {
         let attacks = Self::bishop(sq, occ);
         attacks ^ Self::bishop(sq, occ ^ (attacks & blockers))
     }
+
+    pub const fn white_pawn_setwise(pawns: u64) -> u64 {
+        ((pawns & !File::A) << 7) | ((pawns & !File::H) << 9)
+    }
+
+    pub const fn black_pawn_setwise(pawns: u64) -> u64 {
+        ((pawns & !File::A) >> 9) | ((pawns & !File::H) >> 7)
+    }
 }
 
 struct File;
