@@ -3,6 +3,7 @@ use crate::position::Position;
 use std::time::Instant;
 
 pub const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const KIWIPETE: &str = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
 pub fn preamble() {
     println!("id name monty {}", env!("CARGO_PKG_VERSION"));
@@ -21,7 +22,9 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 
     for cmd in commands {
         match cmd {
-            "position" | "startpos" | "fen" => {}
+            "position" | "fen" => {},
+            "startpos" => fen = STARTPOS.to_string(),
+            "kiwipete" => fen = KIWIPETE.to_string(),
             "moves" => moves = true,
             _ => {
                 if moves {
@@ -33,7 +36,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
         }
     }
 
-    *pos = Position::parse_fen(if fen.is_empty() { STARTPOS } else { &fen });
+    *pos = Position::parse_fen(&fen);
     stack.clear();
 
     for m in move_list {
