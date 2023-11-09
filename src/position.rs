@@ -29,8 +29,8 @@ pub struct Move {
 }
 
 pub struct MoveList {
-    pub list: [Move; 252],
-    pub len: usize,
+    list: [Move; 252],
+    len: usize,
 }
 
 impl Move {
@@ -603,4 +603,34 @@ fn idx_shift<const SIDE: usize, const AMOUNT: u8>(idx: u8) -> u8 {
     } else {
         idx - AMOUNT
     }
+}
+
+#[must_use]
+pub fn perft<const ROOT: bool, const BULK: bool>(pos: &Position, depth: u8) -> u64 {
+    let moves = pos.gen();
+
+    if BULK && !ROOT && depth == 1 {
+        return moves.len as u64;
+    }
+
+    let mut positions = 0;
+    let leaf = depth == 1;
+
+    for m_idx in 0..moves.len {
+        let mut tmp = *pos;
+        tmp.make(moves.list[m_idx]);
+
+        let num = if !BULK && leaf {
+            1
+        } else {
+            perft::<false, BULK>(&tmp, depth - 1)
+        };
+        positions += num;
+
+        if ROOT {
+            println!("{}: {num}", moves.list[m_idx].to_uci());
+        }
+    }
+
+    positions
 }

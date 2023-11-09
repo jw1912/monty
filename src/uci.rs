@@ -1,4 +1,4 @@
-use crate::position::Position;
+use crate::position::{self, Position};
 
 use std::time::Instant;
 
@@ -22,7 +22,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 
     for cmd in commands {
         match cmd {
-            "position" | "fen" => {}
+            "position" | "fen" => {},
             "startpos" => fen = STARTPOS.to_string(),
             "kiwipete" => fen = KIWIPETE.to_string(),
             "moves" => moves = true,
@@ -54,41 +54,11 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 pub fn perft(commands: &[&str], pos: &Position) {
     let depth = commands[1].parse().unwrap();
     let now = Instant::now();
-    let count = perft_fn::<false, true>(pos, depth);
+    let count = position::perft::<false, true>(pos, depth);
     let time = now.elapsed().as_micros();
     println!(
         "perft {depth} time {} nodes {count} ({:.2} Mnps)",
         time / 1000,
         count as f64 / time as f64
     );
-}
-
-#[must_use]
-fn perft_fn<const ROOT: bool, const BULK: bool>(pos: &Position, depth: u8) -> u64 {
-    let moves = pos.gen();
-
-    if BULK && !ROOT && depth == 1 {
-        return moves.len as u64;
-    }
-
-    let mut positions = 0;
-    let leaf = depth == 1;
-
-    for m_idx in 0..moves.len {
-        let mut tmp = *pos;
-        tmp.make(moves.list[m_idx]);
-
-        let num = if !BULK && leaf {
-            1
-        } else {
-            perft_fn::<false, BULK>(&tmp, depth - 1)
-        };
-        positions += num;
-
-        if ROOT {
-            println!("{}: {num}", moves.list[m_idx].to_uci());
-        }
-    }
-
-    positions
 }
