@@ -1,6 +1,8 @@
 use crate::{
     attacks::Attacks,
-    consts::{CASTLE_MASK, Flag, IN_BETWEEN, LINE_THROUGH, Path, Piece, ROOK_MOVES, Rank, Right, Side},
+    consts::{
+        Flag, Path, Piece, Rank, Right, Side, CASTLE_MASK, IN_BETWEEN, LINE_THROUGH, ROOK_MOVES,
+    },
 };
 
 macro_rules! pop_lsb {

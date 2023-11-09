@@ -22,7 +22,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 
     for cmd in commands {
         match cmd {
-            "position" | "fen" => {},
+            "position" | "fen" => {}
             "startpos" => fen = STARTPOS.to_string(),
             "kiwipete" => fen = KIWIPETE.to_string(),
             "moves" => moves = true,
