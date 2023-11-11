@@ -1,4 +1,4 @@
-use crate::position::{self, Position};
+use crate::{position::{self, Position}, mcts::Searcher};
 
 use std::time::Instant;
 
@@ -49,6 +49,15 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
             }
         }
     }
+}
+
+pub fn go(_: &[&str], pos: &Position) {
+    let mut searcher = Searcher::new(*pos);
+
+    let (mov, score) = searcher.search();
+
+    println!("info score wdl {}", score);
+    println!("bestmove {}", mov.to_uci());
 }
 
 pub fn eval(pos: &Position) {

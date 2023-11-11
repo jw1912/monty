@@ -25,6 +25,7 @@ fn main() {
             "uci" => uci::preamble(),
             "isready" => uci::isready(),
             "position" => uci::position(commands, &mut pos, &mut Vec::new()),
+            "go" => uci::go(&commands, &pos),
             "perft" => uci::perft(&commands, &pos),
             "eval" => uci::eval(&pos),
             "quit" => std::process::exit(0),

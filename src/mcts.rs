@@ -2,7 +2,7 @@ use crate::position::{Position, MoveList, GameState, Move};
 
 struct Node {
     visits: i32,
-    wins: f32,
+    wins: f64,
     left: usize,
     state: GameState,
     moves: MoveList,
@@ -35,7 +35,6 @@ pub struct Searcher {
     startpos: Position,
     pos: Position,
     tree: Vec<Node>,
-    playouts: usize,
     node_limit: usize,
     selection: Vec<i32>,
     random: u64,
@@ -47,15 +46,10 @@ impl Searcher {
             startpos: pos,
             pos,
             tree: Vec::new(),
-            playouts: 0,
             node_limit: 1000,
             selection: Vec::new(),
             random: 21_976_391,
         }
-    }
-
-    fn push(&mut self, node: Node) {
-        self.tree.push(node);
     }
 
     fn selected(&self) -> i32 {
@@ -124,7 +118,7 @@ impl Searcher {
         self.selection.push(to_explore.ptr);
     }
 
-    fn simulate(&self) -> f32 {
+    fn simulate(&self) -> f64 {
         let node_ptr = self.selected();
 
         let node = &self.tree[node_ptr as usize];
@@ -137,7 +131,7 @@ impl Searcher {
         }
     }
 
-    fn backprop(&mut self, mut result: f32) {
+    fn backprop(&mut self, mut result: f64) {
         while let Some(node_ptr) = self.selection.pop() {
             let node = &mut self.tree[node_ptr as usize];
             node.visits += 1;
@@ -148,13 +142,13 @@ impl Searcher {
         self.tree[0].visits += 1;
     }
 
-    pub fn go(&mut self) -> Move {
+    pub fn search(&mut self) -> (Move, f64) {
         self.tree.clear();
 
         let root_node = Node::new(&self.startpos, self.startpos.stm());
         self.tree.push(root_node);
 
-        let mut nodes = 0;
+        let mut nodes = 1;
 
         while nodes <= self.node_limit {
             self.select_leaf();
@@ -166,15 +160,25 @@ impl Searcher {
             let result = self.simulate();
 
             self.backprop(result);
+
+            nodes += 1;
         }
 
         let root_node = &self.tree[0];
 
+        let mut best_move = root_node.moves[0];
+        let mut best_score = -1.0;
+
         for mov in root_node.moves.iter() {
             let node = &self.tree[mov.ptr as usize];
-            let score =
+            let score = node.wins / f64::from(node.visits);
+
+            if score > best_score {
+                best_score = score;
+                best_move = *mov;
+            }
         }
 
-        0
+        (best_move, best_score)
     }
 }

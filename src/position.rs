@@ -200,8 +200,8 @@ impl Position {
         Network::out(&accs[self.stm()], &accs[self.stm() ^ 1], self.occ())
     }
 
-    pub fn eval(&self) -> f32 {
-        let eval = self.eval_cp() as f32;
+    pub fn eval(&self) -> f64 {
+        let eval = self.eval_cp() as f64;
 
         1.0 / (1.0 + (-eval / 400.0).exp())
     }
