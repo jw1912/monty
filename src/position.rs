@@ -192,7 +192,7 @@ impl Position {
             }
         }
 
-        Network::out(&accs[self.stm()], &accs[self.stm() ^ 1], self.occ())
+        Network::out(&accs[self.stm()], &accs[self.stm() ^ 1])
     }
 
     pub fn eval(&self) -> f64 {
