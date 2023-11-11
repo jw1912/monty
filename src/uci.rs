@@ -51,14 +51,14 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
     }
 }
 
-pub fn go(commands: &[&str], pos: &Position) {
+pub fn go(commands: &[&str], stack: Vec<u64>, pos: &Position) {
     let nodes = if let ["go", "nodes", x] = commands {
         x.parse().unwrap_or(1000)
     } else {
         1000
     };
 
-    let mut searcher = Searcher::new(*pos, nodes);
+    let mut searcher = Searcher::new(*pos, stack, nodes);
 
     let (mov, _) = searcher.search();
 
@@ -66,6 +66,9 @@ pub fn go(commands: &[&str], pos: &Position) {
 }
 
 pub fn eval(pos: &Position) {
+    println!("info hash {}", pos.hash());
+    println!("info phase {}", pos.phase());
+    println!("info halfm {}", pos.halfm());
     println!("info eval cp {} wdl {:.2}", pos.eval_cp(), pos.eval() * 100.0);
 }
 

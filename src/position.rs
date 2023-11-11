@@ -1,8 +1,7 @@
 use crate::{
     attacks::Attacks,
-    consts::{
-        Flag, Path, Piece, Rank, Right, Side, CASTLE_MASK, IN_BETWEEN, LINE_THROUGH, ROOK_MOVES, ZVALS,
-    }, network::{Accumulator, Network},
+    consts::*,
+    network::{Accumulator, Network},
 };
 
 macro_rules! pop_lsb {
@@ -20,6 +19,7 @@ pub struct Position {
     rights: u8,
     halfm: u8,
     hash: u64,
+    phase: i32,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -36,7 +36,7 @@ pub struct MoveList {
     len: usize,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum GameState {
     Ongoing,
     Lost,
@@ -150,6 +150,16 @@ impl Position {
         hash ^ ZVALS.cr[usize::from(self.rights)] ^ ZVALS.c[self.stm()]
     }
 
+    #[must_use]
+    pub fn phase(&self) -> i32 {
+        self.phase
+    }
+
+    #[must_use]
+    pub fn halfm(&self) -> u8 {
+        self.halfm
+    }
+
     // POSITION INFO
 
     #[must_use]
@@ -177,7 +187,44 @@ impl Position {
         self.is_square_attacked(king as usize, self.stm(), self.occ())
     }
 
-    pub fn game_state(&self, moves: &MoveList) -> GameState {
+    pub fn draw(&self) -> bool {
+        if self.halfm >= 100 {
+            return true;
+        }
+
+        let ph = self.phase;
+        let b = self.bb[Piece::BISHOP];
+        ph <= 2
+            && self.bb[Piece::PAWN] == 0
+            && ((ph != 2)
+                || (b & self.bb[Side::WHITE] != b
+                    && b & self.bb[Side::BLACK] != b
+                    && (b & 0x55AA55AA55AA55AA == b || b & 0xAA55AA55AA55AA55 == b)))
+    }
+
+    fn repetition(&self, stack: &[u64]) -> bool {
+        let curr_hash = self.hash();
+
+        for &hash in stack
+            .iter()
+            .rev()
+            .take(self.halfm as usize + 1)
+            .skip(1)
+            .step_by(2)
+        {
+            if hash == curr_hash {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn game_state(&self, moves: &MoveList, stack: &[u64]) -> GameState {
+        if self.draw() || self.repetition(stack) {
+            return GameState::Draw;
+        }
+
         if moves.is_empty() {
             if self.in_check() {
                 GameState::Lost
@@ -321,6 +368,7 @@ impl Position {
         // captures
         if captured != Piece::EMPTY {
             self.toggle(side ^ 1, captured, mov.to);
+            self.phase -= PHASE_VALS[captured];
         }
 
         // more complex moves
@@ -334,6 +382,7 @@ impl Position {
             Flag::ENP => self.toggle(side ^ 1, Piece::PAWN, mov.to ^ 8),
             Flag::NPR.. => {
                 let promo = usize::from((mov.flag & 3) + 3);
+                self.phase += PHASE_VALS[promo];
                 self.toggle(side, Piece::PAWN, mov.to);
                 self.toggle(side, promo, mov.to);
             }
@@ -363,7 +412,9 @@ impl Position {
                     .position(|element| element == ch)
                     .unwrap_or(6);
                 let colour = usize::from(idx > 5);
-                pos.toggle(colour, idx + 2 - 6 * colour, (8 * row + col) as u8);
+                let pc = idx + 2 - 6 * colour;
+                pos.toggle(colour, pc, (8 * row + col) as u8);
+                pos.phase += PHASE_VALS[pc];
                 col += 1;
             }
         }

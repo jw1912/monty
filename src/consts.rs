@@ -173,3 +173,5 @@ pub static ZVALS: ZobristVals = {
 
     ZobristVals { pcs, cr, enp, c }
 };
+
+pub const PHASE_VALS: [i32; 8] = [0, 0, 0, 1, 1, 2, 4, 0];

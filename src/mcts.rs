@@ -11,9 +11,9 @@ struct Node {
 }
 
 impl Node {
-    fn new(pos: &Position) -> Self {
+    fn new(pos: &Position, stack: &[u64]) -> Self {
         let moves = pos.gen();
-        let state = pos.game_state(&moves);
+        let state = pos.game_state(&moves, stack);
 
         Self {
             visits: 0,
@@ -35,23 +35,32 @@ impl Node {
 
 pub struct Searcher {
     startpos: Position,
+    startstack: Vec<u64>,
     pos: Position,
     tree: Vec<Node>,
+    stack: Vec<u64>,
     node_limit: usize,
     selection: Vec<i32>,
     random: u64,
 }
 
 impl Searcher {
-    pub fn new(pos: Position, node_limit: usize) -> Self {
+    pub fn new(pos: Position, stack: Vec<u64>, node_limit: usize) -> Self {
         Self {
             startpos: pos,
+            startstack: stack.clone(),
             pos,
             tree: Vec::new(),
+            stack,
             node_limit,
             selection: Vec::new(),
             random: 21_976_391,
         }
+    }
+
+    fn make_move(&mut self, mov: Move) {
+        self.stack.push(self.pos.hash());
+        self.pos.make(mov);
     }
 
     fn selected(&self) -> i32 {
@@ -67,6 +76,7 @@ impl Searcher {
 
     fn select_leaf(&mut self) {
         self.pos = self.startpos;
+        self.stack = self.startstack.clone();
         self.selection.clear();
         self.selection.push(0);
 
@@ -88,7 +98,7 @@ impl Searcher {
                 break;
             }
 
-            self.pos.make(mov);
+            self.make_move(mov);
             self.selection.push(next);
             node_ptr = next;
         }
@@ -108,9 +118,10 @@ impl Searcher {
             node.moves.swap(random_idx, node.left);
         }
 
-        self.pos.make(node.moves[node.left]);
+        let mov = node.moves[node.left];
+        self.make_move(mov);
 
-        let new_node = Node::new(&self.pos);
+        let new_node = Node::new(&self.pos, &self.stack);
         self.tree.push(new_node);
 
         let new_ptr = self.tree.len() as i32 - 1;
@@ -151,6 +162,10 @@ impl Searcher {
         let mut worst_score = 1.1;
 
         for mov in root_node.moves.iter() {
+            if mov.ptr == -1 {
+                continue;
+            }
+
             let node = &self.tree[mov.ptr as usize];
             let score = node.wins / f64::from(node.visits);
 
@@ -167,7 +182,7 @@ impl Searcher {
         let timer = Instant::now();
         self.tree.clear();
 
-        let root_node = Node::new(&self.startpos);
+        let root_node = Node::new(&self.startpos, &[]);
         self.tree.push(root_node);
 
         let mut nodes = 1;

@@ -8,6 +8,7 @@ mod uci;
 fn main() {
     // initialise engine
     let mut pos = position::Position::parse_fen(uci::STARTPOS);
+    let mut stack = Vec::new();
 
     // main uci loop
     loop {
@@ -24,8 +25,8 @@ fn main() {
         match *commands.first().unwrap_or(&"oops") {
             "uci" => uci::preamble(),
             "isready" => uci::isready(),
-            "position" => uci::position(commands, &mut pos, &mut Vec::new()),
-            "go" => uci::go(&commands, &pos),
+            "position" => uci::position(commands, &mut pos, &mut stack),
+            "go" => uci::go(&commands, stack.clone(), &pos),
             "perft" => uci::perft(&commands, &pos),
             "eval" => uci::eval(&pos),
             "quit" => std::process::exit(0),
