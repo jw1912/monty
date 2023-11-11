@@ -27,10 +27,6 @@ impl Node {
     fn is_terminal(&self) -> bool {
         self.state != GameState::Ongoing
     }
-
-    fn num_children(&self) -> usize {
-        self.moves.len()
-    }
 }
 
 pub struct Searcher {
@@ -75,39 +71,29 @@ impl Searcher {
     }
 
     fn pick_child(&self, node: &Node) -> Move {
-        let cpuct = 1.41;
+        let c = 1.41;
         let fpu = 0.5;
-        let policy = 1.0 / node.num_children() as f64;
 
-        let total_visits = node
-            .moves
-            .iter()
-            .map(|mov| {
-                if mov.ptr == -1 {
-                    0
-                } else {
-                    self.tree[mov.ptr as usize].visits
-                }
-            })
-            .sum::<i32>();
-
-        let expl = cpuct * policy * f64::from(total_visits).sqrt();
+        let sqrt_ln_visit = f64::from(node.visits).ln().sqrt();
+        let expl = c * sqrt_ln_visit;
 
         let mut best_move = node.moves[0];
-        let mut best_puct = -0.0;
+        let mut best_uct = 0.0;
 
         for mov in node.moves.iter() {
-            let puct = if mov.ptr == -1 {
+            let uct = if mov.ptr == -1 {
                 fpu + expl
             } else {
                 let child = &self.tree[mov.ptr as usize];
-                let u = child.wins / f64::from(child.visits);
-                let p = expl / f64::from(child.visits);
-                u + p
+
+                let w = child.wins / f64::from(child.visits);
+                let u = expl / f64::from(child.visits).sqrt();
+
+                w + u
             };
 
-            if puct > best_puct {
-                best_puct = puct;
+            if uct > best_uct {
+                best_uct = uct;
                 best_move = *mov;
             }
         }
@@ -187,18 +173,16 @@ impl Searcher {
         while let Some(node_ptr) = self.selection.pop() {
             let node = &mut self.tree[node_ptr as usize];
             node.visits += 1;
-            node.wins += result;
             result = 1.0 - result;
+            node.wins += result;
         }
-
-        self.tree[0].visits += 1;
     }
 
     fn get_bestmove(&self) -> (Move, f64) {
         let root_node = &self.tree[0];
 
         let mut best_move = root_node.moves[0];
-        let mut worst_score = 1.1;
+        let mut best_score = 0.0;
 
         for mov in root_node.moves.iter() {
             if mov.ptr == -1 {
@@ -208,13 +192,21 @@ impl Searcher {
             let node = &self.tree[mov.ptr as usize];
             let score = node.wins / f64::from(node.visits);
 
-            if score < worst_score {
-                worst_score = score;
+            //println!(
+            //    "info move {} score wdl {:.2}% ({:.2} / {})",
+            //    mov.to_uci(),
+            //    score * 100.0,
+            //    node.wins,
+            //    node.visits,
+            //);
+
+            if score > best_score {
+                best_score = score;
                 best_move = *mov;
             }
         }
 
-        (best_move, 1.0 - worst_score)
+        (best_move, best_score)
     }
 
     pub fn search(&mut self) -> (Move, f64) {
