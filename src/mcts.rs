@@ -161,7 +161,7 @@ impl Searcher {
             let node = &self.tree[mov.ptr as usize];
             let score = node.wins / f64::from(node.visits);
 
-            println!("info move {} score wdl {:.2}", mov.to_uci(), score * 100.0);
+            //println!("info move {} score wdl {:.2}", mov.to_uci(), score * 100.0);
 
             if score > best_score {
                 best_score = score;
@@ -192,12 +192,13 @@ impl Searcher {
 
             self.backprop(result);
 
-            if nodes % 100_000 == 0 {
+            if nodes % 20_000 == 0 {
                 let (bm, score) = self.get_bestmove();
                 let elapsed = timer.elapsed().as_secs_f32();
                 let nps = nodes as f32 / elapsed;
                 println!(
-                    "info score cp {:.2} nodes {nodes} nps {nps:.0} pv {}",
+                    "info depth {} score cp {:.0} nodes {nodes} nps {nps:.0} pv {}",
+                    nodes / 20_000,
                     -400.0 * (1.0 / score - 1.0).ln(),
                     bm.to_uci()
                 );

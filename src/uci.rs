@@ -60,9 +60,8 @@ pub fn go(commands: &[&str], pos: &Position) {
 
     let mut searcher = Searcher::new(*pos, nodes);
 
-    let (mov, score) = searcher.search();
+    let (mov, _) = searcher.search();
 
-    println!("info score wdl {:.2}", score * 100.0);
     println!("bestmove {}", mov.to_uci());
 }
 
