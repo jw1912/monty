@@ -11,9 +11,9 @@ struct Node {
 }
 
 impl Node {
-    fn new(pos: &Position, root_stm: usize) -> Self {
+    fn new(pos: &Position) -> Self {
         let moves = pos.gen();
-        let state = pos.game_state(&moves, root_stm);
+        let state = pos.game_state(&moves);
 
         Self {
             visits: 0,
@@ -110,7 +110,7 @@ impl Searcher {
 
         self.pos.make(node.moves[node.left]);
 
-        let new_node = Node::new(&self.pos, self.startpos.stm());
+        let new_node = Node::new(&self.pos);
         self.tree.push(new_node);
 
         let new_ptr = self.tree.len() as i32 - 1;
@@ -127,25 +127,18 @@ impl Searcher {
         let node = &self.tree[node_ptr as usize];
 
         match node.state {
-            GameState::Won => 1.0,
             GameState::Lost => 0.0,
             GameState::Draw => 0.5,
-            GameState::Ongoing => {
-                let stm_eval = self.pos.eval();
-                if self.startpos.stm() == self.pos.stm() {
-                    stm_eval
-                } else {
-                    1.0 - stm_eval
-                }
-            },
+            GameState::Ongoing => self.pos.eval(),
         }
     }
 
-    fn backprop(&mut self, result: f64) {
+    fn backprop(&mut self, mut result: f64) {
         while let Some(node_ptr) = self.selection.pop() {
             let node = &mut self.tree[node_ptr as usize];
             node.visits += 1;
             node.wins += result;
+            result = 1.0 - result;
         }
 
         self.tree[0].visits += 1;
@@ -155,28 +148,26 @@ impl Searcher {
         let root_node = &self.tree[0];
 
         let mut best_move = root_node.moves[0];
-        let mut best_score = -1.0;
+        let mut worst_score = 1.1;
 
         for mov in root_node.moves.iter() {
             let node = &self.tree[mov.ptr as usize];
             let score = node.wins / f64::from(node.visits);
 
-            //println!("info move {} score wdl {:.2}", mov.to_uci(), score * 100.0);
-
-            if score > best_score {
-                best_score = score;
+            if score < worst_score {
+                worst_score = score;
                 best_move = *mov;
             }
         }
 
-        (best_move, best_score)
+        (best_move, 1.0 - worst_score)
     }
 
     pub fn search(&mut self) -> (Move, f64) {
         let timer = Instant::now();
         self.tree.clear();
 
-        let root_node = Node::new(&self.startpos, self.startpos.stm());
+        let root_node = Node::new(&self.startpos);
         self.tree.push(root_node);
 
         let mut nodes = 1;

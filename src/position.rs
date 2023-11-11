@@ -37,7 +37,6 @@ pub struct MoveList {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
     Ongoing,
-    Won,
     Lost,
     Draw,
 }
@@ -165,14 +164,10 @@ impl Position {
         self.is_square_attacked(king as usize, self.stm(), self.occ())
     }
 
-    pub fn game_state(&self, moves: &MoveList, stm: usize) -> GameState {
+    pub fn game_state(&self, moves: &MoveList) -> GameState {
         if moves.is_empty() {
             if self.in_check() {
-                if self.stm() == stm {
-                    GameState::Lost
-                } else {
-                    GameState::Won
-                }
+                GameState::Lost
             } else {
                 GameState::Draw
             }
