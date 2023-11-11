@@ -1,9 +1,7 @@
-#![warn(clippy::pedantic)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_precision_loss)]
-
 mod attacks;
 mod consts;
+mod mcts;
+mod network;
 mod position;
 mod uci;
 
@@ -28,6 +26,7 @@ fn main() {
             "isready" => uci::isready(),
             "position" => uci::position(commands, &mut pos, &mut Vec::new()),
             "perft" => uci::perft(&commands, &pos),
+            "eval" => uci::eval(&pos),
             "quit" => std::process::exit(0),
             _ => {}
         }

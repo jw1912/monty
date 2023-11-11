@@ -51,6 +51,10 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
     }
 }
 
+pub fn eval(pos: &Position) {
+    println!("info eval cp {} wdl {:.2}", pos.eval_cp(), pos.eval() * 100.0);
+}
+
 pub fn perft(commands: &[&str], pos: &Position) {
     let depth = commands[1].parse().unwrap();
     let now = Instant::now();

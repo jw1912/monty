@@ -2,7 +2,7 @@ use crate::{
     attacks::Attacks,
     consts::{
         Flag, Path, Piece, Rank, Right, Side, CASTLE_MASK, IN_BETWEEN, LINE_THROUGH, ROOK_MOVES,
-    },
+    }, network::{Accumulator, Network},
 };
 
 macro_rules! pop_lsb {
@@ -26,11 +26,20 @@ pub struct Move {
     to: u8,
     flag: u8,
     moved: u8,
+    pub ptr: i32,
 }
 
 pub struct MoveList {
     list: [Move; 252],
     len: usize,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum GameState {
+    Ongoing,
+    Won,
+    Lost,
+    Draw,
 }
 
 impl Move {
@@ -41,6 +50,7 @@ impl Move {
             to,
             flag,
             moved,
+            ptr: -1,
         }
     }
 
@@ -63,11 +73,36 @@ impl std::ops::Deref for MoveList {
     }
 }
 
+impl std::ops::Index<usize> for MoveList {
+    type Output = Move;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.list[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for MoveList {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.list[index]
+    }
+}
+
 impl MoveList {
     #[inline]
     fn push(&mut self, from: u8, to: u8, flag: u8, mpc: usize) {
         self.list[self.len] = Move::new(from, to, flag, mpc as u8);
         self.len += 1;
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub fn swap(&mut self, a: usize, b: usize) {
+        self.list.swap(a, b);
     }
 }
 
@@ -123,6 +158,52 @@ impl Position {
     #[must_use]
     pub fn opps(&self) -> u64 {
         self.bb[usize::from(!self.stm)]
+    }
+
+    pub fn in_check(&self) -> bool {
+        let king = (self.piece(Piece::KING) & self.boys()).trailing_zeros();
+        self.is_square_attacked(king as usize, self.stm(), self.occ())
+    }
+
+    pub fn game_state(&self, moves: &MoveList, stm: usize) -> GameState {
+        if moves.is_empty() {
+            if self.in_check() {
+                if self.stm() == stm {
+                    GameState::Lost
+                } else {
+                    GameState::Won
+                }
+            } else {
+                GameState::Draw
+            }
+        } else {
+            GameState::Ongoing
+        }
+    }
+
+    pub fn eval_cp(&self) -> i32 {
+        let mut accs = [Accumulator::default(); 2];
+
+        for side in [Side::WHITE, Side::BLACK] {
+            for piece in Piece::PAWN..=Piece::KING {
+                let mut bb = self.piece(piece) & self.bb[side];
+                let pc = 64 * (piece - 2);
+
+                while bb > 0 {
+                    pop_lsb!(sq, bb);
+                    accs[0].add_feature(384 * side + pc + sq as usize);
+                    accs[1].add_feature(384 * (side ^ 1) + pc + (sq as usize ^ 56));
+                }
+            }
+        }
+
+        Network::out(&accs[self.stm()], &accs[self.stm() ^ 1], self.occ())
+    }
+
+    pub fn eval(&self) -> f32 {
+        let eval = self.eval_cp() as f32;
+
+        1.0 / (1.0 + (-eval / 400.0).exp())
     }
 
     #[must_use]
