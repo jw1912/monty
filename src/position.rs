@@ -1,7 +1,7 @@
 use crate::{
     attacks::Attacks,
     consts::{
-        Flag, Path, Piece, Rank, Right, Side, CASTLE_MASK, IN_BETWEEN, LINE_THROUGH, ROOK_MOVES,
+        Flag, Path, Piece, Rank, Right, Side, CASTLE_MASK, IN_BETWEEN, LINE_THROUGH, ROOK_MOVES, ZVALS,
     }, network::{Accumulator, Network},
 };
 
@@ -18,6 +18,8 @@ pub struct Position {
     stm: bool,
     enp_sq: u8,
     rights: u8,
+    halfm: u8,
+    hash: u64,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -135,6 +137,17 @@ impl Position {
     #[must_use]
     pub fn enp_sq(&self) -> u8 {
         self.enp_sq
+    }
+
+    #[must_use]
+    pub fn hash(&self) -> u64 {
+        let mut hash = self.hash;
+
+        if self.enp_sq > 0 {
+            hash ^= ZVALS.enp[self.enp_sq as usize & 7];
+        }
+
+        hash ^ ZVALS.cr[usize::from(self.rights)] ^ ZVALS.c[self.stm()]
     }
 
     // POSITION INFO
@@ -274,15 +287,16 @@ impl Position {
 
     // MODIFY POSITION
 
-    pub fn toggle(&mut self, side: usize, piece: usize, bit: u64) {
+    pub fn toggle(&mut self, side: usize, piece: usize, sq: u8) {
+        let bit = 1 << sq;
         self.bb[piece] ^= bit;
         self.bb[side] ^= bit;
+        self.hash ^= ZVALS.pcs[side][piece][usize::from(sq)];
     }
 
     pub fn make(&mut self, mov: Move) {
         // extracting move info
         let side = usize::from(self.stm);
-        let bb_from = 1 << mov.from;
         let bb_to = 1 << mov.to;
         let captured = if mov.flag & Flag::CAP == 0 {
             Piece::EMPTY
@@ -294,30 +308,34 @@ impl Position {
         self.stm = !self.stm;
         self.enp_sq = 0;
         self.rights &= CASTLE_MASK[usize::from(mov.to)] & CASTLE_MASK[usize::from(mov.from)];
+        self.halfm += 1;
+
+        if mov.moved == Piece::PAWN as u8 || mov.flag & Flag::CAP > 0 {
+            self.halfm = 0;
+        }
 
         // move piece
-        self.toggle(side, usize::from(mov.moved), bb_from ^ bb_to);
+        self.toggle(side, usize::from(mov.moved), mov.from);
+        self.toggle(side, usize::from(mov.moved), mov.to);
 
         // captures
         if captured != Piece::EMPTY {
-            self.toggle(side ^ 1, captured, bb_to);
+            self.toggle(side ^ 1, captured, mov.to);
         }
 
         // more complex moves
         match mov.flag {
             Flag::DBL => self.enp_sq = mov.to ^ 8,
             Flag::KS | Flag::QS => {
-                let bits = ROOK_MOVES[usize::from(mov.flag == Flag::KS)][side];
-                self.toggle(side, Piece::ROOK, bits);
+                let (rfr, rto) = ROOK_MOVES[usize::from(mov.flag == Flag::KS)][side];
+                self.toggle(side, Piece::ROOK, rfr);
+                self.toggle(side, Piece::ROOK, rto);
             }
-            Flag::ENP => {
-                let bits = 1 << (mov.to ^ 8);
-                self.toggle(side ^ 1, Piece::PAWN, bits);
-            }
+            Flag::ENP => self.toggle(side ^ 1, Piece::PAWN, mov.to ^ 8),
             Flag::NPR.. => {
                 let promo = usize::from((mov.flag & 3) + 3);
-                self.bb[Piece::PAWN] ^= bb_to;
-                self.bb[promo] ^= bb_to;
+                self.toggle(side, Piece::PAWN, mov.to);
+                self.toggle(side, promo, mov.to);
             }
             _ => {}
         }
@@ -345,7 +363,7 @@ impl Position {
                     .position(|element| element == ch)
                     .unwrap_or(6);
                 let colour = usize::from(idx > 5);
-                pos.toggle(colour, idx + 2 - 6 * colour, 1 << (8 * row + col));
+                pos.toggle(colour, idx + 2 - 6 * colour, (8 * row + col) as u8);
                 col += 1;
             }
         }

@@ -40,7 +40,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
     stack.clear();
 
     for m in move_list {
-        //stack.push(pos.hash());
+        stack.push(pos.hash());
         let possible_moves = pos.gen();
 
         for mov in possible_moves.iter() {
