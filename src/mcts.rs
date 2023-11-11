@@ -74,6 +74,47 @@ impl Searcher {
         self.random
     }
 
+    fn pick_child(&self, node: &Node) -> Move {
+        let cpuct = 1.41;
+        let fpu = 0.5;
+        let policy = 1.0 / node.num_children() as f64;
+
+        let total_visits = node
+            .moves
+            .iter()
+            .map(|mov| {
+                if mov.ptr == -1 {
+                    0
+                } else {
+                    self.tree[mov.ptr as usize].visits
+                }
+            })
+            .sum::<i32>();
+
+        let expl = cpuct * policy * f64::from(total_visits).sqrt();
+
+        let mut best_move = node.moves[0];
+        let mut best_puct = -0.0;
+
+        for mov in node.moves.iter() {
+            let puct = if mov.ptr == -1 {
+                fpu + expl
+            } else {
+                let child = &self.tree[mov.ptr as usize];
+                let u = child.wins / f64::from(child.visits);
+                let p = expl / f64::from(child.visits);
+                u + p
+            };
+
+            if puct > best_puct {
+                best_puct = puct;
+                best_move = *mov;
+            }
+        }
+
+        best_move
+    }
+
     fn select_leaf(&mut self) {
         self.pos = self.startpos;
         self.stack = self.startstack.clone();
@@ -83,15 +124,13 @@ impl Searcher {
         let mut node_ptr = 0;
 
         loop {
-            let random = self.random() as usize;
             let node = &self.tree[node_ptr as usize];
 
             if node.is_terminal() {
                 break;
             }
 
-            let random_idx = random % node.num_children();
-            let mov = node.moves[random_idx];
+            let mov = self.pick_child(node);
             let next = mov.ptr;
 
             if next == -1 {
