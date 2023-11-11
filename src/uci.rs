@@ -51,12 +51,18 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
     }
 }
 
-pub fn go(_: &[&str], pos: &Position) {
-    let mut searcher = Searcher::new(*pos);
+pub fn go(commands: &[&str], pos: &Position) {
+    let nodes = if let ["go", "nodes", x] = commands {
+        x.parse().unwrap_or(1000)
+    } else {
+        1000
+    };
+
+    let mut searcher = Searcher::new(*pos, nodes);
 
     let (mov, score) = searcher.search();
 
-    println!("info score wdl {}", score);
+    println!("info score wdl {:.2}", score * 100.0);
     println!("bestmove {}", mov.to_uci());
 }
 
