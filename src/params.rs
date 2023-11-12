@@ -23,7 +23,7 @@ impl Param {
 
     fn uci(&self, name: &str) {
         println!(
-            "option name {} type spin value {} min {} max {}",
+            "option name {} type spin default {} min {} max {}",
             name,
             self.val,
             self.min,
@@ -35,7 +35,7 @@ impl Param {
 impl Default for TunableParams {
     fn default() -> Self {
         Self {
-            cpuct: Param::new(1.4, 0.1, 5.0),
+            cpuct: Param::new(1.41, 0.1, 5.0),
             fpu: Param::new(0.5, 0.0, 1.0),
             cap: Param::new(2.0, 0.0, 5.0),
         }
@@ -55,10 +55,12 @@ impl TunableParams {
         self.cap.val
     }
 
-    pub fn uci_info(&self) {
-        self.cpuct.uci("cpuct");
-        self.fpu.uci("fpu");
-        self.cap.uci("cap");
+    pub fn uci_info() {
+        let def = Self::default();
+
+        def.cpuct.uci("cpuct");
+        def.fpu.uci("fpu");
+        def.cap.uci("cap");
     }
 
     pub fn set(&mut self, name: &str, val: f64) {

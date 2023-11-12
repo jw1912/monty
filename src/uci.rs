@@ -5,10 +5,10 @@ use std::time::Instant;
 pub const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const KIWIPETE: &str = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
-pub fn preamble(params: &TunableParams) {
+pub fn preamble() {
     println!("id name monty {}", env!("CARGO_PKG_VERSION"));
     println!("id author Jamie Whiting");
-    params.uci_info();
+    TunableParams::uci_info();
     println!("uciok");
 }
 

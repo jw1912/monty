@@ -27,7 +27,7 @@ fn main() {
         let commands = input.split_whitespace().collect::<Vec<_>>();
 
         match *commands.first().unwrap_or(&"oops") {
-            "uci" => uci::preamble(&params),
+            "uci" => uci::preamble(),
             "isready" => uci::isready(),
             "setoption" => uci::setoption(&commands, &mut params),
             "position" => uci::position(commands, &mut pos, &mut stack),
