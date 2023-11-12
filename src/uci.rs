@@ -63,7 +63,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 }
 
 pub fn go(commands: &[&str], stack: Vec<u64>, pos: &Position, params: &TunableParams) {
-    let mut nodes = 5_000;
+    let mut nodes = 10_000_000;
     let mut max_time = None;
 
     match commands {
