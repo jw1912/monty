@@ -23,11 +23,11 @@ impl Param {
 
     fn uci(&self, name: &str) {
         println!(
-            "option name {} type spin default {} min {} max {}",
+            "option name {} type spin default {:.0} min {:.0} max {:.0}",
             name,
-            self.val,
-            self.min,
-            self.max,
+            self.val * 100.0,
+            self.min * 100.0,
+            self.max * 100.0,
         );
     }
 }

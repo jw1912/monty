@@ -18,12 +18,12 @@ pub fn isready() {
 
 pub fn setoption(commands: &[&str], params: &mut TunableParams) {
     let (name, val) = if let ["setoption", "name", x, "value", y] = commands {
-        (*x, y.parse().unwrap())
+        (*x, y.parse::<i32>().unwrap())
     } else {
         return;
     };
 
-    params.set(name, val);
+    params.set(name, f64::from(val) / 100.0);
 }
 
 pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
@@ -63,7 +63,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 }
 
 pub fn go(commands: &[&str], stack: Vec<u64>, pos: &Position, params: &TunableParams) {
-    let mut nodes = 10_000_000;
+    let mut nodes = 5_000;
     let mut max_time = None;
 
     match commands {
