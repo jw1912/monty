@@ -217,6 +217,11 @@ impl Searcher {
         while mov.ptr != -1 {
             pv.push(mov);
             node = &self.tree[mov.ptr as usize];
+
+            if node.moves.is_empty() {
+                break;
+            }
+
             mov = self.get_bestmove(node).0;
         }
 
