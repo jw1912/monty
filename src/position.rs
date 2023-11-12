@@ -108,7 +108,12 @@ impl MoveList {
         let mut total = 0.0;
 
         for mov in self.list.iter_mut() {
-            let val = if mov.flag & Flag::CAP > 0 {2f64} else {0.0};
+            let val = if mov.flag & Flag::CAP > 0 {
+                2f64
+            } else {
+                0f64
+            };
+
             mov.policy = val.exp();
             total += mov.policy;
         }

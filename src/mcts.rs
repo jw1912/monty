@@ -83,7 +83,7 @@ impl Searcher {
 
         for mov in node.moves.iter() {
             let uct = if mov.ptr == -1 {
-                fpu + expl
+                fpu + expl * mov.policy()
             } else {
                 let child = &self.tree[mov.ptr as usize];
 
