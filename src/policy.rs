@@ -14,9 +14,8 @@ pub fn get_policy(mov: &Move, pos: &Position, threats: u64, params: &TunablePara
     if mov.flag() & Flag::CAP > 0 {
         score += params.cap();
 
-        if usize::from(mov.moved()) < pos.get_pc(1 << mov.to()) {
-            score += params.mvv_lva();
-        }
+        let diff = pos.get_pc(1 << mov.to()) as i32 - i32::from(mov.moved());
+        score += params.mvv_lva() * f64::from(diff);
     }
 
     if safe_from_pawns(mov, threats) {
