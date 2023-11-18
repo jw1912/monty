@@ -8,7 +8,7 @@ pub fn get_policy(mov: &Move, threats: u64, params: &TunableParams) -> f64 {
     let mut score = 0.0;
 
     if [Flag::QPR, Flag::QPC].contains(&mov.flag()) {
-        score += 2.0;
+        score += params.promo();
     }
 
     if mov.flag() & Flag::CAP > 0 {
