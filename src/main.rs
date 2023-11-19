@@ -63,7 +63,7 @@ fn run_bench(params: &TunableParams) {
     for fen in bench_fens {
         let pos = Position::parse_fen(fen);
         let mut searcher = Searcher::new(pos, Vec::new(), 1_000_000, params.clone());
-        searcher.search(None, 4, false, false, &mut total_nodes);
+        searcher.search(None, 5, false, false, &mut total_nodes);
     }
 
     println!(

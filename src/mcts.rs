@@ -287,7 +287,7 @@ impl Searcher {
                         nodes {nodes} \
                         nps {nps:.0} \
                         pv {pv}",
-                        -400.0 * (1.0 / score - 1.0).ln(),
+                        -400.0 * (1.0 / score.clamp(0.0, 1.0) - 1.0).ln(),
                         elapsed.as_millis(),
                     );
                 }
