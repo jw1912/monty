@@ -1,8 +1,6 @@
 use crate::{
-    consts::Flag,
-    params::TunableParams,
-    policy::get_policy,
-    position::Position,
+    search::{params::TunableParams, policy::get_policy},
+    state::{consts::Flag, position::Position},
 };
 
 #[macro_export]

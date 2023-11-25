@@ -1,7 +1,6 @@
 use crate::{
-    moves::{Move, MoveList},
-    params::TunableParams,
-    position::{GameState, Position},
+    state::{moves::{Move, MoveList}, position::{GameState, Position}},
+    search::params::TunableParams,
 };
 
 use std::{fmt::Write, time::Instant};

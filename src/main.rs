@@ -1,16 +1,10 @@
-mod attacks;
-mod consts;
-mod mcts;
-mod moves;
-mod params;
-mod policy;
-mod position;
+mod search;
+mod state;
+mod train;
 mod uci;
-mod value;
 
-use mcts::Searcher;
-use params::TunableParams;
-use position::Position;
+use search::{mcts::Searcher, params::TunableParams};
+use state::position::Position;
 
 use std::time::Instant;
 

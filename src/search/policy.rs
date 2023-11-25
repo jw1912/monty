@@ -1,4 +1,7 @@
-use crate::{consts::Flag, moves::Move, params::TunableParams, position::Position};
+use crate::{
+    state::{consts::Flag, moves::Move, position::Position},
+    search::params::TunableParams
+};
 
 pub fn get_policy(mov: &Move, pos: &Position, params: &TunableParams) -> f64 {
     let mut score = 0.0;

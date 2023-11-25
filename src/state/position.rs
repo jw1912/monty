@@ -1,10 +1,7 @@
 use crate::{
-    attacks::Attacks,
-    consts::*,
-    moves::{Move, MoveList},
-    params::TunableParams,
+    state::{attacks::Attacks, consts::*, moves::{Move, MoveList},},
+    search::{params::TunableParams, value::{Accumulator, ValueNetwork}},
     pop_lsb,
-    value::{Accumulator, ValueNetwork},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]

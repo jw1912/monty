@@ -1,7 +1,6 @@
 use crate::{
-    mcts::Searcher,
-    params::TunableParams,
-    position::{self, Position},
+    search::{mcts::Searcher, params::TunableParams},
+    state::position::{self, Position},
 };
 
 use std::time::Instant;
