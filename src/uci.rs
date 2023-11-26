@@ -1,5 +1,5 @@
 use crate::{
-    search::{mcts::Searcher, params::TunableParams},
+    search::{mcts::Searcher, params::TunableParams, policy::PolicyNetwork},
     state::position::{self, Position},
 };
 
@@ -71,7 +71,14 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
     }
 }
 
-pub fn go(commands: &[&str], stack: Vec<u64>, pos: &Position, params: &TunableParams, report_moves: bool) {
+pub fn go(
+    commands: &[&str],
+    stack: Vec<u64>,
+    pos: &Position,
+    params: &TunableParams,
+    report_moves: bool,
+    policy: &PolicyNetwork,
+) {
     let mut nodes = 10_000_000;
     let mut max_time = None;
     let mut max_depth = 256;
@@ -92,7 +99,7 @@ pub fn go(commands: &[&str], stack: Vec<u64>, pos: &Position, params: &TunablePa
         }
     }
 
-    let mut searcher = Searcher::new(*pos, stack, nodes, params.clone());
+    let mut searcher = Searcher::new(*pos, stack, nodes, params.clone(), policy);
 
     let (mov, _) = searcher.search(max_time, max_depth, report_moves, true, &mut 0);
 

@@ -1,5 +1,5 @@
 use crate::{
-    search::{params::TunableParams, policy::get_policy},
+    search::policy::{get_policy, PolicyNetwork},
     state::{consts::Flag, position::Position},
 };
 
@@ -64,16 +64,8 @@ impl Move {
         self.flag & Flag::CAP > 0
     }
 
-    pub fn is_en_passant(&self) -> bool {
-        self.flag == Flag::ENP
-    }
-
-    pub fn is_promo(&self) -> bool {
-        self.flag & Flag::NPR > 0
-    }
-
-    pub fn promo_pc(&self) -> usize {
-        usize::from(self.flag & 3) + 3
+    pub fn index(&self, flip: u8) -> usize {
+        usize::from(self.moved) * 64 + usize::from(self.to ^ flip)
     }
 
     #[must_use]
@@ -136,7 +128,7 @@ impl MoveList {
         self.list.swap(a, b);
     }
 
-    pub fn set_policies(&mut self, pos: &Position, params: &TunableParams) {
+    pub fn set_policies(&mut self, pos: &Position, params: &PolicyNetwork) {
         let mut total = 0.0;
 
         for mov in self.list.iter_mut() {
