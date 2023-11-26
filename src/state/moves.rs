@@ -64,6 +64,18 @@ impl Move {
         self.flag & Flag::CAP > 0
     }
 
+    pub fn is_en_passant(&self) -> bool {
+        self.flag == Flag::ENP
+    }
+
+    pub fn is_promo(&self) -> bool {
+        self.flag & Flag::NPR > 0
+    }
+
+    pub fn promo_pc(&self) -> usize {
+        usize::from(self.flag & 3) + 3
+    }
+
     pub fn index(&self, flip: u8) -> usize {
         usize::from(self.moved - 2) * 64 + usize::from(self.to ^ flip)
     }

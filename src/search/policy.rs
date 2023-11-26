@@ -1,7 +1,7 @@
 use crate::{
     pop_lsb,
     state::{
-        consts::{Piece, Side},
+        consts::{Flag, Piece, Side},
         moves::Move,
         position::Position,
     },
@@ -56,6 +56,27 @@ impl PolicyNetwork {
 pub static POLICY_NETWORK: PolicyNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
+pub fn hce_policy(mov: &Move, pos: &Position) -> f64 {
+    let mut score = 0.0;
+
+    if pos.see(mov, -108) {
+        score += 2.0;
+    }
+
+    if [Flag::QPR, Flag::QPC].contains(&mov.flag()) {
+        score +=  2.0;
+    }
+
+    if mov.is_capture() {
+        score += 2.0;
+
+        let diff = pos.get_pc(1 << mov.to()) as i32 - i32::from(mov.moved());
+        score += 0.2 * f64::from(diff);
+    }
+
+    score
+}
+
 pub fn get_policy(mov: &Move, pos: &Position, params: &PolicyNetwork) -> f64 {
     let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };
     let idx = mov.index(flip);
@@ -79,5 +100,5 @@ pub fn get_policy(mov: &Move, pos: &Position, params: &PolicyNetwork) -> f64 {
         }
     }
 
-    score
+    score + hce_policy(mov, pos)
 }
