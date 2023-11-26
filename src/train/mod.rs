@@ -109,7 +109,8 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
     for ((idx, expected), score) in pos.moves.iter().zip(policies.iter()) {
         let err = score / total - expected;
-        let adj = 2.0 * err * score * (total - score) / total.powi(2);
+        let dp = (total - score) / total.powi(2);
+        let adj = 2.0 * err * score * dp;
 
         for &feat in &feats {
             grad.weights[*idx][feat] += adj;
