@@ -67,6 +67,9 @@ fn get_features(pos: &Position) -> Vec<usize> {
     let mut res = Vec::with_capacity(pos.occ().count_ones() as usize);
     let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };
 
+    // bias is just an always-present feature
+    res.push(768);
+
     for piece in Piece::PAWN..=Piece::KING {
         let pc = 64 * (piece - 2);
 
@@ -92,7 +95,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     let mut policies = Vec::with_capacity(pos.moves.len());
     let mut total = 0.0;
 
-    for (idx, expected) in &pos.moves {
+    for (idx, _) in &pos.moves {
         let mut score = 0.0;
         for &feat in &feats {
             score += policy.weights[*idx][feat];
@@ -105,7 +108,12 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     }
 
     for ((idx, expected), score) in pos.moves.iter().zip(policies.iter()) {
+        let err = score / total - expected;
+        let adj = 2.0 * err * score * (total - score) / total.powi(2);
 
+        for &feat in &feats {
+            grad.weights[*idx][feat] += adj;
+        }
     }
 }
 
