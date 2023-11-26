@@ -1,5 +1,5 @@
 use crate::{
-    search::{mcts::Searcher, params::TunableParams, policy::PolicyNetwork},
+    search::{mcts::Searcher, params::TunableParams, policy::{PolicyNetwork, get_policy}},
     state::position::{self, Position},
 };
 
@@ -106,7 +106,13 @@ pub fn go(
     println!("bestmove {}", mov.to_uci());
 }
 
-pub fn eval(pos: &Position, params: &TunableParams) {
+pub fn eval(pos: &Position, params: &TunableParams, policy: &PolicyNetwork) {
+    let moves = pos.gen();
+
+    for mov in moves.iter() {
+        println!("info move {} policy {}", mov.to_uci(), get_policy(mov, pos, policy));
+    }
+
     println!(
         "info eval cp {} wdl {:.2}",
         pos.eval_cp(),

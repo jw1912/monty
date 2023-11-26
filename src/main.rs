@@ -60,7 +60,7 @@ fn main() {
                 &policy,
             ),
             "perft" => uci::perft(&commands, &pos),
-            "eval" => uci::eval(&pos, &params),
+            "eval" => uci::eval(&pos, &params, &policy),
             "quit" => std::process::exit(0),
             _ => {}
         }

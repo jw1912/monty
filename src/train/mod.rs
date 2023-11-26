@@ -39,7 +39,9 @@ fn train(policy: &mut PolicyNetwork, data: Vec<TrainingPosition>) {
         gradient_batch(policy, &mut grad, batch);
     }
 
-    update(policy, &grad);
+    let adj = 0.001 / data.len() as f64;
+
+    update(policy, &grad, adj);
 }
 
 fn gradient_batch(policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) {
@@ -120,10 +122,10 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     }
 }
 
-fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork) {
+fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork, adj: f64) {
     for (i, j) in policy.weights.iter_mut().zip(grad.weights.iter()) {
         for (a, b) in i.iter_mut().zip(j.iter()) {
-            *a -= 0.001 * *b;
+            *a -= adj * *b;
         }
     }
 }
