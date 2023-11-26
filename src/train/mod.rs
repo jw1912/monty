@@ -65,7 +65,7 @@ fn gradient_batch(policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[Tra
 }
 
 fn get_features(pos: &Position) -> Vec<usize> {
-    let mut res = Vec::with_capacity(pos.occ().count_ones() as usize);
+    let mut res = Vec::with_capacity(pos.occ().count_ones() as usize + 1);
     let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };
 
     // bias is just an always-present feature
