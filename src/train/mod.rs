@@ -32,16 +32,13 @@ fn shuffle(data: &mut Vec<TrainingPosition>) {
 }
 
 fn train(policy: &mut PolicyNetwork, data: Vec<TrainingPosition>) {
-    let mut grad = PolicyNetwork::boxed_and_zeroed();
-
     for (i, batch) in data.chunks(1024).enumerate() {
         println!("# [Batch {}]", i + 1);
+        let mut grad = PolicyNetwork::boxed_and_zeroed();
         gradient_batch(policy, &mut grad, batch);
+        let adj = 0.001 / data.len() as f64;
+        update(policy, &grad, adj);
     }
-
-    let adj = 0.001 / data.len() as f64;
-
-    update(policy, &grad, adj);
 }
 
 fn gradient_batch(policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) {
