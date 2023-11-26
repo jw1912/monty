@@ -104,6 +104,9 @@ impl<'a> DatagenThread<'a> {
             }
 
             self.positions.push(training_pos);
+            if self.positions.len() % 1024 == 0 {
+                println!("thread {} count {}", self.id, self.positions.len());
+            }
 
             engine.startstack.push(engine.startpos.hash());
             engine.startpos.make(bm);

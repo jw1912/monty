@@ -4,10 +4,12 @@ mod rng;
 use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::{Side, Piece}, position::Position}, pop_lsb};
 use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
+const DATAGEN_SIZE: usize = 16_384;
+
 pub fn run_training(params: TunableParams, policy: &mut PolicyNetwork) {
     for iteration in 1..=64 {
         println!("# [Generating Data]");
-        let mut data = run_datagen(1_000_000, params.clone(), policy);
+        let mut data = run_datagen(DATAGEN_SIZE, params.clone(), policy);
 
         println!("# [Shuffling]");
         shuffle(&mut data);
@@ -22,7 +24,7 @@ pub fn run_training(params: TunableParams, policy: &mut PolicyNetwork) {
 fn shuffle(data: &mut Vec<TrainingPosition>) {
     let mut rng = Rand::new(101298019);
 
-    for _ in 0..4_000_000 {
+    for _ in 0..DATAGEN_SIZE * 2 {
         let idx1 = rng.rand_int() as usize % data.len();
         let idx2 = rng.rand_int() as usize % data.len();
         data.swap(idx1, idx2);
@@ -32,7 +34,7 @@ fn shuffle(data: &mut Vec<TrainingPosition>) {
 fn train(policy: &mut PolicyNetwork, data: Vec<TrainingPosition>) {
     let mut grad = PolicyNetwork::boxed_and_zeroed();
 
-    for (i, batch) in data.chunks(16_384).enumerate() {
+    for (i, batch) in data.chunks(1024).enumerate() {
         println!("# [Batch {}]", i + 1);
         gradient_batch(policy, &mut grad, batch);
     }
@@ -42,7 +44,7 @@ fn train(policy: &mut PolicyNetwork, data: Vec<TrainingPosition>) {
 
 fn gradient_batch(policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) {
     let threads = 6;
-    let size = batch.len() / threads;
+    let size = (batch.len() / threads).max(1);
 
     std::thread::scope(|s| {
         batch
