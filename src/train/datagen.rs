@@ -80,6 +80,10 @@ impl<'a> DatagenThread<'a> {
             engine.startpos.make(mov);
         }
 
+        if engine.startpos.gen().is_empty() {
+            return;
+        }
+
         // play out game
         loop {
             let (bm, _) = engine.search(None, 128, false, false, &mut 0);

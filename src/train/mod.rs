@@ -36,7 +36,7 @@ fn train(policy: &mut PolicyNetwork, data: Vec<TrainingPosition>) {
         println!("# [Batch {}]", i + 1);
         let mut grad = PolicyNetwork::boxed_and_zeroed();
         gradient_batch(policy, &mut grad, batch);
-        let adj = 0.001 / batch.len() as f64;
+        let adj = 0.1 / batch.len() as f64;
         update(policy, &grad, adj);
     }
 }
