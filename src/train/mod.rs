@@ -4,7 +4,8 @@ mod rng;
 use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::{Side, Piece}, position::Position}, pop_lsb};
 use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
-const DATAGEN_SIZE: usize = 4096;
+const DATAGEN_SIZE: usize = 65_536;
+const BATCH_SIZE: usize = 4_096;
 
 pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNetwork) {
     for iteration in 1..=64 {
@@ -38,7 +39,7 @@ fn train(threads: usize, policy: &mut PolicyNetwork, data: Vec<TrainingPosition>
 
     let mut running_error = 0.0;
 
-    for batch in data.chunks(1024) {
+    for batch in data.chunks(BATCH_SIZE) {
         let mut grad = PolicyNetwork::boxed_and_zeroed();
         running_error += gradient_batch(threads, policy, &mut grad, batch);
         let adj = 10.0 / batch.len() as f64;

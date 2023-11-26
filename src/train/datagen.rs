@@ -4,8 +4,6 @@ use crate::{
     train::rng::Rand, uci::STARTPOS,
 };
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 #[derive(Clone)]
 pub struct TrainingPosition {
     pub position: Position,
@@ -45,21 +43,14 @@ pub struct DatagenThread<'a> {
 
 impl<'a> DatagenThread<'a> {
     fn new(params: TunableParams, policy: &'a PolicyNetwork) -> Self {
-        let seed = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Guaranteed increasing.")
-            .as_micros() as u32;
-
-        let res = Self {
-            id: seed,
-            rng: Rand::new(seed),
+        let mut rng = Rand::with_seed();
+        Self {
+            id: rng.rand_int(),
+            rng,
             params,
             policy,
             positions: Vec::new(),
-        };
-
-        println!("thread id {} created", res.id);
-        res
+        }
     }
 
     fn run(&mut self, num_positions: usize) {

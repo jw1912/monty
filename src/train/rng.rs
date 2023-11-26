@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 pub struct Rand(u32);
 
 impl Default for Rand {
@@ -22,5 +24,14 @@ impl Rand {
         self.0 ^= self.0 >> 17;
         self.0 ^= self.0 << 5;
         self.0
+    }
+
+    pub fn with_seed() -> Self {
+        let seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Guaranteed increasing.")
+            .as_micros() as u32;
+
+        Self(seed)
     }
 }
