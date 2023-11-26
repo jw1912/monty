@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Clone)]
 pub struct TrainingPosition {
     pub position: Position,
-    pub moves: Vec<(usize, f64)>,
+    pub moves: Vec<(usize, i32)>,
 }
 
 pub fn run_datagen(
@@ -111,12 +111,12 @@ impl<'a> DatagenThread<'a> {
                 }
 
                 let child = &engine.tree[mov.ptr() as usize];
-                let score = child.score();
+                let visits = child.visits();
 
                 let flip = if engine.startpos.stm() == Side::BLACK {56} else {0};
                 let idx = mov.index(flip);
 
-                training_pos.moves.push((idx, score));
+                training_pos.moves.push((idx, visits));
             }
 
             self.positions.push(training_pos);

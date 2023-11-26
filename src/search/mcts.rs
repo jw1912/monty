@@ -37,8 +37,8 @@ impl Node {
         self.state != GameState::Ongoing
     }
 
-    pub fn score(&self) -> f64 {
-        self.wins / f64::from(self.visits)
+    pub fn visits(&self) -> i32 {
+        self.visits
     }
 }
 
