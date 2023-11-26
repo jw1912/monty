@@ -4,18 +4,18 @@ mod rng;
 use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::{Side, Piece}, position::Position}, pop_lsb};
 use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
-const DATAGEN_SIZE: usize = 16_384;
+const DATAGEN_SIZE: usize = 65_536;
 
-pub fn run_training(params: TunableParams, policy: &mut PolicyNetwork) {
+pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNetwork) {
     for iteration in 1..=64 {
         println!("# [Generating Data]");
-        let mut data = run_datagen(DATAGEN_SIZE, params.clone(), policy);
+        let mut data = run_datagen(threads, DATAGEN_SIZE, params.clone(), policy);
 
         println!("# [Shuffling]");
         shuffle(&mut data);
 
         println!("# [Training]");
-        train(policy, data);
+        train(threads, policy, data);
 
         policy.write_to_bin(format!("policy-{iteration}.bin").as_str());
     }
@@ -31,18 +31,17 @@ fn shuffle(data: &mut Vec<TrainingPosition>) {
     }
 }
 
-fn train(policy: &mut PolicyNetwork, data: Vec<TrainingPosition>) {
-    for (i, batch) in data.chunks(1024).enumerate() {
+fn train(threads: usize, policy: &mut PolicyNetwork, data: Vec<TrainingPosition>) {
+    for (i, batch) in data.chunks(4096).enumerate() {
         println!("# [Batch {}]", i + 1);
         let mut grad = PolicyNetwork::boxed_and_zeroed();
-        gradient_batch(policy, &mut grad, batch);
+        gradient_batch(threads, policy, &mut grad, batch);
         let adj = 0.1 / batch.len() as f64;
         update(policy, &grad, adj);
     }
 }
 
-fn gradient_batch(policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) {
-    let threads = 6;
+fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) {
     let size = (batch.len() / threads).max(1);
 
     std::thread::scope(|s| {
@@ -122,7 +121,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork, adj: f64) {
     for (i, j) in policy.weights.iter_mut().zip(grad.weights.iter()) {
         for (a, b) in i.iter_mut().zip(j.iter()) {
-            *a += adj * *b;
+            *a -= adj * *b;
         }
     }
 }

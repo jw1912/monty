@@ -6,21 +6,33 @@ use crate::{
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Clone)]
 pub struct TrainingPosition {
     pub position: Position,
     pub moves: Vec<(usize, f64)>,
 }
 
 pub fn run_datagen(
+    threads: usize,
     num_positions: usize,
     params: TunableParams,
     policy: &PolicyNetwork,
 ) -> Vec<TrainingPosition> {
-    let mut thread = DatagenThread::new(params, policy);
-
-    thread.run(num_positions);
-
-    thread.positions
+    std::thread::scope(|s|
+        (0..threads)
+            .map(|_| {
+                s.spawn(|| {
+                    let mut thread = DatagenThread::new(params.clone(), policy);
+                    thread.run(num_positions);
+                    thread.positions
+                })
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|p| p.join().unwrap())
+            .collect::<Vec<_>>()
+            .concat()
+    )
 }
 
 pub struct DatagenThread<'a> {

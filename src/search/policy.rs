@@ -54,7 +54,7 @@ impl PolicyNetwork {
 }
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    unsafe { std::mem::transmute(*include_bytes!("../../policy-4.bin")) };
 
 pub fn get_policy(mov: &Move, pos: &Position, params: &PolicyNetwork) -> f64 {
     let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };

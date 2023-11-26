@@ -21,14 +21,16 @@ fn main() {
     let mut report_moves = false;
     let mut policy = Box::new(POLICY_NETWORK);
 
-    // bench
-    match std::env::args().nth(1).as_deref() {
+    let mut args = std::env::args();
+
+    match args.nth(1).as_deref() {
         Some("bench") => {
             run_bench(&params, &policy);
             return;
         }
         Some("train") => {
-            run_training(params, &mut policy);
+            let arg = args.next().unwrap();
+            run_training(arg.parse().unwrap(), params, &mut policy);
             return;
         }
         _ => {}
