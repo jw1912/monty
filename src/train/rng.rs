@@ -15,10 +15,6 @@ impl Default for Rand {
 }
 
 impl Rand {
-    pub fn new(seed: u32) -> Self {
-        Self(seed)
-    }
-
     pub fn rand_int(&mut self) -> u32 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 17;

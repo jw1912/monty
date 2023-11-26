@@ -4,8 +4,8 @@ mod rng;
 use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::{Side, Piece}, position::Position}, pop_lsb};
 use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
-const DATAGEN_SIZE: usize = 65_536;
-const BATCH_SIZE: usize = 4_096;
+const DATAGEN_SIZE: usize = 16_384;
+const BATCH_SIZE: usize = 1_024;
 
 pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNetwork) {
     for iteration in 1..=64 {
@@ -23,7 +23,7 @@ pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNe
 }
 
 fn shuffle(data: &mut Vec<TrainingPosition>) {
-    let mut rng = Rand::new(101298019);
+    let mut rng = Rand::with_seed();
 
     for _ in 0..DATAGEN_SIZE * 2 {
         let idx1 = rng.rand_int() as usize % data.len();
