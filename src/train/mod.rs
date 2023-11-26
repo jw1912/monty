@@ -1,7 +1,7 @@
 mod datagen;
 mod rng;
 
-use crate::search::{policy::PolicyNetwork, params::TunableParams};
+use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::{Side, Piece}, position::Position}, pop_lsb};
 use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
 pub fn run_training(params: TunableParams, policy: &mut PolicyNetwork) {
@@ -63,8 +63,50 @@ fn gradient_batch(policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[Tra
     });
 }
 
-fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut PolicyNetwork) {
+fn get_features(pos: &Position) -> Vec<usize> {
+    let mut res = Vec::with_capacity(pos.occ().count_ones() as usize);
+    let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };
 
+    for piece in Piece::PAWN..=Piece::KING {
+        let pc = 64 * (piece - 2);
+
+        let mut our_bb = pos.piece(piece) & pos.piece(pos.stm());
+        while our_bb > 0 {
+            pop_lsb!(sq, our_bb);
+            res.push(pc + usize::from(sq ^ flip));
+        }
+
+        let mut opp_bb = pos.piece(piece) & pos.piece(pos.stm() ^ 1);
+        while opp_bb > 0 {
+            pop_lsb!(sq, opp_bb);
+            res.push(384 + pc + usize::from(sq ^ flip));
+        }
+    }
+
+    res
+}
+
+fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut PolicyNetwork) {
+    let feats = get_features(&pos.position);
+
+    let mut policies = Vec::with_capacity(pos.moves.len());
+    let mut total = 0.0;
+
+    for (idx, expected) in &pos.moves {
+        let mut score = 0.0;
+        for &feat in &feats {
+            score += policy.weights[*idx][feat];
+        }
+
+        score = score.exp();
+
+        total += score;
+        policies.push(score);
+    }
+
+    for ((idx, expected), score) in pos.moves.iter().zip(policies.iter()) {
+
+    }
 }
 
 fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork) {
