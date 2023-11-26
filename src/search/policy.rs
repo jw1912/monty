@@ -1,7 +1,7 @@
 use crate::{
     pop_lsb,
     state::{
-        consts::{Flag, Piece, Side},
+        consts::{Flag, Piece},
         moves::Move,
         position::Position,
     },
@@ -78,7 +78,7 @@ pub fn hce_policy(mov: &Move, pos: &Position) -> f64 {
 }
 
 pub fn get_policy(mov: &Move, pos: &Position, params: &PolicyNetwork) -> f64 {
-    let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };
+    let flip = pos.flip_val();
     let idx = mov.index(flip);
 
     let weights_ref = &params.weights[idx];

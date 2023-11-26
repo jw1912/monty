@@ -190,6 +190,10 @@ impl Position {
         0
     }
 
+    pub fn flip_val(&self) -> u8 {
+        if self.stm() == Side::BLACK { 56 } else { 0 }
+    }
+
     #[must_use]
     pub fn threats(&self) -> u64 {
         let mut threats = 0;

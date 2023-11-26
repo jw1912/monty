@@ -1,13 +1,13 @@
 use crate::{
     search::{mcts::Searcher, params::TunableParams, policy::PolicyNetwork},
-    state::{position::{GameState, Position}, consts::Side},
+    state::{moves::Move, position::{GameState, Position}},
     train::rng::Rand, uci::STARTPOS,
 };
 
 #[derive(Clone)]
 pub struct TrainingPosition {
     pub position: Position,
-    pub moves: Vec<(usize, i32)>,
+    pub moves: Vec<(Move, i32)>,
 }
 
 pub fn run_datagen(
@@ -104,10 +104,7 @@ impl<'a> DatagenThread<'a> {
                 let child = &engine.tree[mov.ptr() as usize];
                 let visits = child.visits();
 
-                let flip = if engine.startpos.stm() == Side::BLACK {56} else {0};
-                let idx = mov.index(flip);
-
-                training_pos.moves.push((idx, visits));
+                training_pos.moves.push((*mov, visits));
             }
 
             self.positions.push(training_pos);

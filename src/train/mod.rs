@@ -1,7 +1,7 @@
 mod datagen;
 mod rng;
 
-use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::{Side, Piece}, position::Position}, pop_lsb};
+use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::Piece, position::Position}, pop_lsb};
 use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
 const DATAGEN_SIZE: usize = 16_384;
@@ -82,7 +82,7 @@ fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyNetwo
 
 fn get_features(pos: &Position) -> Vec<usize> {
     let mut res = Vec::with_capacity(pos.occ().count_ones() as usize + 1);
-    let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };
+    let flip = pos.flip_val();
 
     // bias is just an always-present feature
     res.push(768);
@@ -113,10 +113,14 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     let mut total = 0.0;
     let mut total_visits = 0;
 
-    for (idx, visits) in &pos.moves {
+    let flip = pos.position.flip_val();
+
+    for (mov, visits) in &pos.moves {
+        let idx = mov.index(flip);
+
         let mut score = 0.0;
         for &feat in &feats {
-            score += policy.weights[*idx][feat];
+            score += policy.weights[idx][feat];
         }
 
         score = score.exp();
@@ -126,7 +130,8 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         policies.push(score);
     }
 
-    for ((idx, visits), score) in pos.moves.iter().zip(policies.iter()) {
+    for ((mov, visits), score) in pos.moves.iter().zip(policies.iter()) {
+        let idx = mov.index(flip);
         let expected = f64::from(*visits) / f64::from(total_visits);
         let err = score / total - expected;
 
@@ -136,7 +141,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         let adj = 2.0 * err * score * dp;
 
         for &feat in &feats {
-            grad.weights[*idx][feat] += adj;
+            grad.weights[idx][feat] += adj;
         }
     }
 }
