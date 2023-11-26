@@ -122,7 +122,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork, adj: f64) {
     for (i, j) in policy.weights.iter_mut().zip(grad.weights.iter()) {
         for (a, b) in i.iter_mut().zip(j.iter()) {
-            *a -= adj * *b;
+            *a += adj * *b;
         }
     }
 }
