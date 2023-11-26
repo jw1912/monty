@@ -1,12 +1,20 @@
 use crate::{
-    state::{attacks::Attacks, consts::*, moves::{Move, MoveList},},
-    search::{params::TunableParams, value::{Accumulator, ValueNetwork}},
     pop_lsb,
+    search::{
+        params::TunableParams,
+        value::{Accumulator, ValueNetwork},
+    },
+    state::{
+        attacks::Attacks,
+        consts::*,
+        moves::{Move, MoveList},
+    },
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum GameState {
-    #[default] Ongoing,
+    #[default]
+    Ongoing,
     Lost,
     Draw,
 }

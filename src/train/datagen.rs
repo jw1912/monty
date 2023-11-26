@@ -1,6 +1,6 @@
 use crate::{
-    state::position::{Position, GameState},
     search::{mcts::Searcher, params::TunableParams, policy::PolicyNetwork},
+    state::position::{GameState, Position},
     train::rng::Rand,
 };
 
@@ -35,7 +35,12 @@ impl<'a> DatagenThread<'a> {
         res
     }
 
-    pub fn run_game(&mut self, position: Position, params: TunableParams, policy: &'a PolicyNetwork) {
+    pub fn run_game(
+        &mut self,
+        position: Position,
+        params: TunableParams,
+        policy: &'a PolicyNetwork,
+    ) {
         let mut engine = Searcher::new(position, Vec::new(), 1_000, params, policy);
 
         // play 8 or 9 random moves
@@ -62,7 +67,6 @@ impl<'a> DatagenThread<'a> {
             let moves = engine.startpos.gen();
             let game_state = engine.startpos.game_state(&moves, &engine.startstack);
             if game_state != GameState::Ongoing {
-
                 break;
             }
         }

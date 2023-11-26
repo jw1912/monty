@@ -1,6 +1,9 @@
 use crate::{
-    state::{moves::{Move, MoveList}, position::{GameState, Position}},
     search::{params::TunableParams, policy::PolicyNetwork},
+    state::{
+        moves::{Move, MoveList},
+        position::{GameState, Position},
+    },
 };
 
 use std::{fmt::Write, time::Instant};
@@ -48,7 +51,13 @@ pub struct Searcher<'a> {
 }
 
 impl<'a> Searcher<'a> {
-    pub fn new(pos: Position, stack: Vec<u64>, node_limit: usize, params: TunableParams, policy: &'a PolicyNetwork) -> Self {
+    pub fn new(
+        pos: Position,
+        stack: Vec<u64>,
+        node_limit: usize,
+        params: TunableParams,
+        policy: &'a PolicyNetwork,
+    ) -> Self {
         Self {
             startpos: pos,
             startstack: stack.clone(),

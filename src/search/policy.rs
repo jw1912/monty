@@ -1,6 +1,10 @@
 use crate::{
-    state::{consts::{Piece, Side}, moves::Move, position::Position},
     pop_lsb,
+    state::{
+        consts::{Piece, Side},
+        moves::Move,
+        position::Position,
+    },
 };
 
 pub const INDICES: usize = 6 * 64;
@@ -13,10 +17,11 @@ pub struct PolicyNetwork {
     biases: [f64; INDICES],
 }
 
-pub static POLICY_NETWORK: PolicyNetwork = unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+pub static POLICY_NETWORK: PolicyNetwork =
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 pub fn get_policy(mov: &Move, pos: &Position, params: &PolicyNetwork) -> f64 {
-    let flip = if pos.stm() == Side::BLACK {56} else {0};
+    let flip = if pos.stm() == Side::BLACK { 56 } else { 0 };
     let idx = mov.index(flip);
 
     let weights_ref = &params.weights[idx];

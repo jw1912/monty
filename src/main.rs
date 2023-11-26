@@ -3,7 +3,11 @@ mod state;
 mod train;
 mod uci;
 
-use search::{mcts::Searcher, params::TunableParams, policy::{PolicyNetwork, POLICY_NETWORK}};
+use search::{
+    mcts::Searcher,
+    params::TunableParams,
+    policy::{PolicyNetwork, POLICY_NETWORK},
+};
 use state::position::Position;
 
 use std::time::Instant;
@@ -39,7 +43,14 @@ fn main() {
             "isready" => uci::isready(),
             "setoption" => uci::setoption(&commands, &mut params, &mut report_moves),
             "position" => uci::position(commands, &mut pos, &mut stack),
-            "go" => uci::go(&commands, stack.clone(), &pos, &params, report_moves, &policy),
+            "go" => uci::go(
+                &commands,
+                stack.clone(),
+                &pos,
+                &params,
+                report_moves,
+                &policy,
+            ),
             "perft" => uci::perft(&commands, &pos),
             "eval" => uci::eval(&pos, &params),
             "quit" => std::process::exit(0),
