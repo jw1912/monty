@@ -6,6 +6,7 @@ use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
 const DATAGEN_SIZE: usize = 16_384;
 const BATCH_SIZE: usize = 1_024;
+const LR: f64 = 10.0;
 
 pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNetwork) {
     for iteration in 1..=64 {
@@ -42,7 +43,7 @@ fn train(threads: usize, policy: &mut PolicyNetwork, data: Vec<TrainingPosition>
     for batch in data.chunks(BATCH_SIZE) {
         let mut grad = PolicyNetwork::boxed_and_zeroed();
         running_error += gradient_batch(threads, policy, &mut grad, batch);
-        let adj = 10.0 / batch.len() as f64;
+        let adj = LR / batch.len() as f64;
         update(policy, &grad, adj);
     }
 

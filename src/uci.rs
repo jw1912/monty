@@ -108,9 +108,17 @@ pub fn go(
 
 pub fn eval(pos: &Position, params: &TunableParams, policy: &PolicyNetwork) {
     let moves = pos.gen();
+    let mut policies = Vec::new();
+    let mut total = 0.0;
 
     for mov in moves.iter() {
-        println!("info move {} policy {}", mov.to_uci(), get_policy(mov, pos, policy));
+        let pol = get_policy(mov, pos, policy).exp();
+        total += pol;
+        policies.push(pol);
+    }
+
+    for (mov, policy) in moves.iter().zip(policies) {
+        println!("{} -> {: >5.2}%", mov.to_uci(), policy / total * 100.0);
     }
 
     println!(
