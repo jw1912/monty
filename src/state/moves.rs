@@ -65,7 +65,7 @@ impl Move {
     }
 
     pub fn index(&self, flip: u8) -> usize {
-        usize::from(self.moved) * 64 + usize::from(self.to ^ flip)
+        usize::from(self.moved - 2) * 64 + usize::from(self.to ^ flip)
     }
 
     #[must_use]
