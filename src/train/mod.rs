@@ -13,7 +13,7 @@ pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNe
         let mut data = run_datagen(threads, DATAGEN_SIZE, params.clone(), policy);
 
         println!("# [Shuffling]");
-        shuffle(threads, &mut data);
+        shuffle(&mut data);
 
         println!("# [Training]");
         train(threads, policy, data);
@@ -22,10 +22,10 @@ pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNe
     }
 }
 
-fn shuffle(threads: usize, data: &mut Vec<TrainingPosition>) {
+fn shuffle(data: &mut Vec<TrainingPosition>) {
     let mut rng = Rand::with_seed();
 
-    for _ in 0..DATAGEN_SIZE * 2 * threads {
+    for _ in 0..data.len() * 4 {
         let idx1 = rng.rand_int() as usize % data.len();
         let idx2 = rng.rand_int() as usize % data.len();
         data.swap(idx1, idx2);
