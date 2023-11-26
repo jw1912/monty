@@ -8,13 +8,13 @@ use crate::{
 
 use std::{fmt::Write, time::Instant};
 
-#[derive(Default)]
-struct Node {
+#[derive(Clone, Default)]
+pub struct Node {
     visits: i32,
     wins: f64,
     left: usize,
     state: GameState,
-    moves: MoveList,
+    pub moves: MoveList,
 }
 
 impl Node {
@@ -36,13 +36,17 @@ impl Node {
     fn is_terminal(&self) -> bool {
         self.state != GameState::Ongoing
     }
+
+    pub fn score(&self) -> f64 {
+        self.wins / f64::from(self.visits)
+    }
 }
 
 pub struct Searcher<'a> {
     pub startpos: Position,
     pub startstack: Vec<u64>,
+    pub tree: Vec<Node>,
     pos: Position,
-    tree: Vec<Node>,
     stack: Vec<u64>,
     node_limit: usize,
     selection: Vec<i32>,

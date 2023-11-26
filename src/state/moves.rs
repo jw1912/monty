@@ -21,7 +21,7 @@ pub struct Move {
     policy: f64,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct MoveList {
     list: Vec<Move>,
 }

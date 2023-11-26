@@ -13,8 +13,44 @@ pub const FEATURES: usize = 768;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    weights: [[f64; FEATURES]; INDICES],
-    biases: [f64; INDICES],
+    pub weights: [[f64; FEATURES + 1]; INDICES],
+}
+
+impl std::ops::AddAssign<&PolicyNetwork> for PolicyNetwork {
+    fn add_assign(&mut self, rhs: &PolicyNetwork) {
+        for (i, j) in self.weights.iter_mut().zip(rhs.weights.iter()) {
+            for (a, b) in i.iter_mut().zip(j.iter()) {
+                *a += *b;
+            }
+        }
+    }
+}
+
+impl PolicyNetwork {
+    pub fn boxed_and_zeroed() -> Box<Self> {
+        unsafe {
+            let layout = std::alloc::Layout::new::<Self>();
+            let ptr = std::alloc::alloc_zeroed(layout);
+            if ptr.is_null() {
+                std::alloc::handle_alloc_error(layout);
+            }
+            Box::from_raw(ptr.cast())
+        }
+    }
+
+    pub fn write_to_bin(&self, path: &str) {
+        use std::io::Write;
+        const SIZEOF: usize = std::mem::size_of::<PolicyNetwork>();
+
+        let mut file = std::fs::File::create(path).unwrap();
+
+        unsafe {
+            let ptr: *const Self = self;
+            let slice_ptr: *const u8 = std::mem::transmute(ptr);
+            let slice = std::slice::from_raw_parts(slice_ptr, SIZEOF);
+            file.write_all(slice).unwrap();
+        }
+    }
 }
 
 pub static POLICY_NETWORK: PolicyNetwork =
@@ -25,7 +61,7 @@ pub fn get_policy(mov: &Move, pos: &Position, params: &PolicyNetwork) -> f64 {
     let idx = mov.index(flip);
 
     let weights_ref = &params.weights[idx];
-    let mut score = params.biases[idx];
+    let mut score = weights_ref[768];
 
     for piece in Piece::PAWN..=Piece::KING {
         let pc = 64 * (piece - 2);

@@ -1,22 +1,38 @@
 use crate::{
     search::{mcts::Searcher, params::TunableParams, policy::PolicyNetwork},
-    state::position::{GameState, Position},
-    train::rng::Rand,
+    state::{position::{GameState, Position}, consts::Side},
+    train::rng::Rand, uci::STARTPOS,
 };
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub struct TrainingPosition {
+    pub position: Position,
+    pub moves: Vec<(usize, f64)>,
+}
+
+pub fn run_datagen(
+    num_positions: usize,
+    params: TunableParams,
+    policy: &PolicyNetwork,
+) -> Vec<TrainingPosition> {
+    let mut thread = DatagenThread::new(params, policy);
+
+    thread.run(num_positions);
+
+    thread.positions
+}
+
 pub struct DatagenThread<'a> {
     id: u32,
     rng: Rand,
-    games: u64,
-    fens: u64,
     params: TunableParams,
     policy: &'a PolicyNetwork,
+    positions: Vec<TrainingPosition>,
 }
 
 impl<'a> DatagenThread<'a> {
-    pub fn new(params: TunableParams, policy: &'a PolicyNetwork) -> Self {
+    fn new(params: TunableParams, policy: &'a PolicyNetwork) -> Self {
         let seed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Guaranteed increasing.")
@@ -25,17 +41,24 @@ impl<'a> DatagenThread<'a> {
         let res = Self {
             id: seed,
             rng: Rand::new(seed),
-            games: 0,
-            fens: 0,
             params,
             policy,
+            positions: Vec::new(),
         };
 
         println!("thread id {} created", res.id);
         res
     }
 
-    pub fn run_game(
+    fn run(&mut self, num_positions: usize) {
+        let position = Position::parse_fen(STARTPOS);
+
+        while self.positions.len() < num_positions {
+            self.run_game(position, self.params.clone(), self.policy);
+        }
+    }
+
+    fn run_game(
         &mut self,
         position: Position,
         params: TunableParams,
@@ -60,6 +83,27 @@ impl<'a> DatagenThread<'a> {
         // play out game
         loop {
             let (bm, _) = engine.search(None, 128, false, false, &mut 0);
+
+            let mut training_pos = TrainingPosition {
+                position: engine.startpos,
+                moves: Vec::new(),
+            };
+
+            for mov in engine.tree[0].moves.iter() {
+                if mov.ptr() == -1 {
+                    continue;
+                }
+
+                let child = &engine.tree[mov.ptr() as usize];
+                let score = child.score();
+
+                let flip = if engine.startpos.stm() == Side::BLACK {56} else {0};
+                let idx = mov.index(flip);
+
+                training_pos.moves.push((idx, score));
+            }
+
+            self.positions.push(training_pos);
 
             engine.startstack.push(engine.startpos.hash());
             engine.startpos.make(bm);

@@ -23,9 +23,4 @@ impl Rand {
         self.0 ^= self.0 << 5;
         self.0
     }
-
-    pub fn rand(&mut self, max: f64) -> f64 {
-        let val = self.rand_int();
-        ((1. - f64::from(val) / f64::from(u32::MAX)) * max)
-    }
 }

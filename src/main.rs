@@ -9,6 +9,7 @@ use search::{
     policy::{PolicyNetwork, POLICY_NETWORK},
 };
 use state::position::Position;
+use train::run_training;
 
 use std::time::Instant;
 
@@ -18,12 +19,19 @@ fn main() {
     let mut params = TunableParams::default();
     let mut stack = Vec::new();
     let mut report_moves = false;
-    let policy = POLICY_NETWORK;
+    let mut policy = Box::new(POLICY_NETWORK);
 
     // bench
-    if let Some("bench") = std::env::args().nth(1).as_deref() {
-        run_bench(&params, &policy);
-        return;
+    match std::env::args().nth(1).as_deref() {
+        Some("bench") => {
+            run_bench(&params, &policy);
+            return;
+        }
+        Some("train") => {
+            run_training(params, &mut policy);
+            return;
+        }
+        _ => {}
     }
 
     // main uci loop
