@@ -1,7 +1,7 @@
 mod datagen;
 mod rng;
 
-use crate::{search::{policy::PolicyNetwork, params::TunableParams}, state::{consts::Piece, position::Position}, pop_lsb};
+use crate::{search::{policy::{PolicyNetwork, hce_policy}, params::TunableParams}, state::{consts::Piece, position::Position}, pop_lsb};
 use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
 const DATAGEN_SIZE: usize = 16_384;
@@ -118,7 +118,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     for (mov, visits) in &pos.moves {
         let idx = mov.index(flip);
 
-        let mut score = 0.0;
+        let mut score = hce_policy(mov, &pos.position);
         for &feat in &feats {
             score += policy.weights[idx][feat];
         }

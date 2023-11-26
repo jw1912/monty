@@ -64,7 +64,7 @@ pub fn hce_policy(mov: &Move, pos: &Position) -> f64 {
     }
 
     if [Flag::QPR, Flag::QPC].contains(&mov.flag()) {
-        score +=  2.0;
+        score += 2.0;
     }
 
     if mov.is_capture() {
