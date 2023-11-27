@@ -1,4 +1,4 @@
-const HIDDEN: usize = 768;
+const HIDDEN: usize = 1024;
 const SCALE: i32 = 400;
 const QA: i32 = 255;
 const QB: i32 = 64;
@@ -6,7 +6,7 @@ const QAB: i32 = QA * QB;
 
 #[inline]
 fn activate(x: i16) -> i32 {
-    i32::from(x).clamp(0, QA)
+    i32::from(x).clamp(0, QA).pow(2)
 }
 
 #[repr(C)]
@@ -18,11 +18,11 @@ pub struct ValueNetwork {
 }
 
 static NNUE: ValueNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/altair-net.bin")) };
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/net.bin")) };
 
 impl ValueNetwork {
     pub fn out(boys: &Accumulator, opps: &Accumulator) -> i32 {
-        let mut sum = i32::from(NNUE.output_bias);
+        let mut sum = 0;
 
         for (&x, &w) in boys.vals.iter().zip(&NNUE.output_weights[0].vals) {
             sum += activate(x) * i32::from(w);
@@ -32,7 +32,7 @@ impl ValueNetwork {
             sum += activate(x) * i32::from(w);
         }
 
-        sum * SCALE / QAB
+        (sum / QA + i32::from(NNUE.output_bias)) * SCALE / QAB
     }
 }
 
