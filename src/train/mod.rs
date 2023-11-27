@@ -6,18 +6,20 @@ use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
 
 const DATAGEN_SIZE: usize = 16_384;
 const BATCH_SIZE: usize = 1_024;
-const LR: f64 = 10.0;
+const LR: f64 = 1.0;
 
-pub fn run_training(threads: usize, params: TunableParams, policy: &mut PolicyNetwork) {
+pub fn run_training(threads: usize, params: TunableParams, _policy: &mut PolicyNetwork) {
+    let mut policy = PolicyNetwork::boxed_and_zeroed();
+
     for iteration in 1..=64 {
         println!("# [Generating Data]");
-        let mut data = run_datagen(threads, DATAGEN_SIZE, params.clone(), policy);
+        let mut data = run_datagen(threads, DATAGEN_SIZE, params.clone(), &policy);
 
         println!("# [Shuffling]");
         shuffle(&mut data);
 
         println!("# [Training]");
-        train(threads, policy, data);
+        train(threads, &mut policy, data);
 
         policy.write_to_bin(format!("policy-{iteration}.bin").as_str());
     }
