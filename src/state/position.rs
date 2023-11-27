@@ -1,9 +1,6 @@
 use crate::{
     pop_lsb,
-    search::{
-        params::TunableParams,
-        value::{Accumulator, ValueNetwork},
-    },
+    search::value::{Accumulator, ValueNetwork},
     state::{
         attacks::Attacks,
         consts::*,
@@ -157,12 +154,6 @@ impl Position {
         }
 
         ValueNetwork::out(&accs[self.stm()], &accs[self.stm() ^ 1])
-    }
-
-    pub fn eval(&self, params: &TunableParams) -> f64 {
-        let eval = self.eval_cp() as f64;
-
-        1.0 / (1.0 + (-eval / (100.0 * params.scale())).exp())
     }
 
     #[must_use]
@@ -430,7 +421,7 @@ impl Position {
     }
 
     #[must_use]
-    pub fn gen(&self) -> MoveList {
+    pub fn gen<const QUIETS: bool>(&self) -> MoveList {
         let mut moves = MoveList::default();
 
         let pinned = self.pinned();
@@ -442,21 +433,23 @@ impl Position {
             0
         };
 
-        self.king_moves(&mut moves, threats);
+        self.king_moves::<QUIETS>(&mut moves, threats);
 
         if checkers == 0 {
-            self.gen_pnbrq(&mut moves, u64::MAX, u64::MAX, pinned);
-            self.castles(&mut moves, self.occ(), threats);
+            self.gen_pnbrq::<QUIETS>(&mut moves, u64::MAX, u64::MAX, pinned);
+            if QUIETS {
+                self.castles(&mut moves, self.occ(), threats);
+            }
         } else if checkers & (checkers - 1) == 0 {
             let checker_sq = checkers.trailing_zeros() as usize;
             let free = IN_BETWEEN[king_sq][checker_sq];
-            self.gen_pnbrq(&mut moves, checkers, free, pinned);
+            self.gen_pnbrq::<QUIETS>(&mut moves, checkers, free, pinned);
         }
 
         moves
     }
 
-    fn king_moves(&self, moves: &mut MoveList, threats: u64) {
+    fn king_moves<const QUIETS: bool>(&self, moves: &mut MoveList, threats: u64) {
         let king_sq = self.king_index();
         let attacks = Attacks::king(king_sq) & !threats;
         let occ = self.occ();
@@ -467,14 +460,16 @@ impl Position {
             moves.push(king_sq as u8, to, Flag::CAP, Piece::KING);
         }
 
-        let mut quiets = attacks & !occ;
-        while quiets > 0 {
-            pop_lsb!(to, quiets);
-            moves.push(king_sq as u8, to, Flag::QUIET, Piece::KING);
+        if QUIETS {
+            let mut quiets = attacks & !occ;
+            while quiets > 0 {
+                pop_lsb!(to, quiets);
+                moves.push(king_sq as u8, to, Flag::QUIET, Piece::KING);
+            }
         }
     }
 
-    fn gen_pnbrq(&self, moves: &mut MoveList, checkers: u64, free: u64, pinned: u64) {
+    fn gen_pnbrq<const QUIETS: bool>(&self, moves: &mut MoveList, checkers: u64, free: u64, pinned: u64) {
         let boys = self.boys();
         let pawns = self.piece(Piece::PAWN) & boys;
         let side = self.stm();
@@ -482,12 +477,14 @@ impl Position {
         let free_pawns = pawns & !pinned;
         let check_mask = free | checkers;
 
-        if side == Side::WHITE {
-            self.pawn_pushes::<{ Side::WHITE }, false>(moves, free_pawns, free);
-            self.pawn_pushes::<{ Side::WHITE }, true>(moves, pinned_pawns, free);
-        } else {
-            self.pawn_pushes::<{ Side::BLACK }, false>(moves, free_pawns, free);
-            self.pawn_pushes::<{ Side::BLACK }, true>(moves, pinned_pawns, free);
+        if QUIETS {
+            if side == Side::WHITE {
+                self.pawn_pushes::<{ Side::WHITE }, false>(moves, free_pawns, free);
+                self.pawn_pushes::<{ Side::WHITE }, true>(moves, pinned_pawns, free);
+            } else {
+                self.pawn_pushes::<{ Side::BLACK }, false>(moves, free_pawns, free);
+                self.pawn_pushes::<{ Side::BLACK }, true>(moves, pinned_pawns, free);
+            }
         }
 
         if self.enp_sq() > 0 {
@@ -497,10 +494,10 @@ impl Position {
         self.pawn_captures::<false>(moves, free_pawns, checkers);
         self.pawn_captures::<true>(moves, pinned_pawns, checkers);
 
-        self.piece_moves::<{ Piece::KNIGHT }>(moves, check_mask, pinned);
-        self.piece_moves::<{ Piece::BISHOP }>(moves, check_mask, pinned);
-        self.piece_moves::<{ Piece::ROOK }>(moves, check_mask, pinned);
-        self.piece_moves::<{ Piece::QUEEN }>(moves, check_mask, pinned);
+        self.piece_moves::<QUIETS, { Piece::KNIGHT }>(moves, check_mask, pinned);
+        self.piece_moves::<QUIETS, { Piece::BISHOP }>(moves, check_mask, pinned);
+        self.piece_moves::<QUIETS, { Piece::ROOK }>(moves, check_mask, pinned);
+        self.piece_moves::<QUIETS, { Piece::QUEEN }>(moves, check_mask, pinned);
     }
 
     fn castles(&self, moves: &mut MoveList, occ: u64, threats: u64) {
@@ -565,13 +562,13 @@ impl Position {
         pinned
     }
 
-    fn piece_moves<const PC: usize>(&self, moves: &mut MoveList, check_mask: u64, pinned: u64) {
+    fn piece_moves<const QUIETS: bool, const PC: usize>(&self, moves: &mut MoveList, check_mask: u64, pinned: u64) {
         let attackers = self.boys() & self.piece(PC);
-        self.piece_moves_internal::<PC, false>(moves, check_mask, attackers & !pinned);
-        self.piece_moves_internal::<PC, true>(moves, check_mask, attackers & pinned);
+        self.piece_moves_internal::<QUIETS, PC, false>(moves, check_mask, attackers & !pinned);
+        self.piece_moves_internal::<QUIETS, PC, true>(moves, check_mask, attackers & pinned);
     }
 
-    fn piece_moves_internal<const PC: usize, const PINNED: bool>(
+    fn piece_moves_internal<const QUIETS: bool, const PC: usize, const PINNED: bool>(
         &self,
         moves: &mut MoveList,
         check_mask: u64,
@@ -592,7 +589,9 @@ impl Position {
             }
 
             moves.serialise(attacks & self.opps(), from, Flag::CAP, PC);
-            moves.serialise(attacks & !occ, from, Flag::QUIET, PC);
+            if QUIETS {
+                moves.serialise(attacks & !occ, from, Flag::QUIET, PC);
+            }
         }
     }
 
@@ -726,7 +725,7 @@ fn idx_shift<const SIDE: usize, const AMOUNT: u8>(idx: u8) -> u8 {
 
 #[must_use]
 pub fn perft<const ROOT: bool, const BULK: bool>(pos: &Position, depth: u8) -> u64 {
-    let moves = pos.gen();
+    let moves = pos.gen::<true>();
 
     if BULK && !ROOT && depth == 1 {
         return moves.len() as u64;
