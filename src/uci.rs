@@ -65,7 +65,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>) {
 
         for mov in possible_moves.iter() {
             if m == mov.to_uci() {
-                pos.make(*mov);
+                pos.make(*mov, None);
             }
         }
     }

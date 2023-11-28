@@ -80,7 +80,7 @@ impl<'a> DatagenThread<'a> {
             let mov = moves[self.rng.rand_int() as usize % moves.len()];
 
             engine.startstack.push(engine.startpos.hash());
-            engine.startpos.make(mov);
+            engine.startpos.make(mov, None);
         }
 
         if engine.startpos.gen::<true>().is_empty() {
@@ -113,7 +113,7 @@ impl<'a> DatagenThread<'a> {
             }
 
             engine.startstack.push(engine.startpos.hash());
-            engine.startpos.make(bm);
+            engine.startpos.make(bm, None);
 
             let moves = engine.startpos.gen::<true>();
             let game_state = engine.startpos.game_state(&moves, &engine.startstack);

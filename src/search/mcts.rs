@@ -79,7 +79,7 @@ impl<'a> Searcher<'a> {
 
     fn make_move(&mut self, mov: Move) {
         self.stack.push(self.pos.hash());
-        self.pos.make(mov);
+        self.pos.make(mov, None);
     }
 
     fn selected(&self) -> i32 {
@@ -192,7 +192,8 @@ impl<'a> Searcher<'a> {
             GameState::Lost => -self.params.mate_bonus(),
             GameState::Draw => 0.5,
             GameState::Ongoing => {
-                let qs = quiesce(&self.pos, -30_000, 30_000);
+                let accs = self.pos.get_accs();
+                let qs = quiesce(&self.pos, &accs, -30_000, 30_000);
                 cp_wdl(qs, &self.params)
             },
         }

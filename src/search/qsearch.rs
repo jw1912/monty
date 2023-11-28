@@ -1,11 +1,13 @@
 use crate::state::{moves::Move, position::Position};
 
+use super::value::Accumulator;
+
 fn mvv_lva(mov: &Move, pos: &Position) -> i32 {
     8 * pos.get_pc(1 << mov.to()) as i32 - mov.moved() as i32
 }
 
-pub fn quiesce(pos: &Position, mut alpha: i32, beta: i32) -> i32 {
-    let mut eval = pos.eval_cp();
+pub fn quiesce(pos: &Position, acc: &[Accumulator; 2], mut alpha: i32, beta: i32) -> i32 {
+    let mut eval = pos.eval_from_acc(acc);
 
     // stand-pat
     if eval >= beta {
@@ -24,9 +26,10 @@ pub fn quiesce(pos: &Position, mut alpha: i32, beta: i32) -> i32 {
         }
 
         let mut new = *pos;
-        new.make(mov);
+        let mut new_acc = *acc;
+        new.make(mov, Some(&mut new_acc));
 
-        let score = -quiesce(&new, -beta, -alpha);
+        let score = -quiesce(&new, &new_acc, -beta, -alpha);
 
         eval = eval.max(score);
         alpha = alpha.max(eval);
