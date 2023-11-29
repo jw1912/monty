@@ -3,6 +3,35 @@ use crate::{TrainingPosition, Rand};
 use monty_core::{GameState, Position, STARTPOS};
 use monty_engine::{PolicyNetwork, TunableParams, Searcher};
 
+use std::{fs::File, io::{BufWriter, Write}};
+
+unsafe fn to_slice_with_lifetime<T, U>(slice: &[T]) -> &[U] {
+    let src_size = std::mem::size_of_val(slice);
+    let tgt_size = std::mem::size_of::<U>();
+
+    assert!(
+        src_size % tgt_size == 0,
+        "Target type size does not divide slice size!"
+    );
+
+    let len = src_size / tgt_size;
+    std::slice::from_raw_parts(slice.as_ptr().cast(), len)
+}
+
+fn write(data: &mut Vec<TrainingPosition>, output: &mut BufWriter<File>) {
+    if data.is_empty() {
+        return
+    }
+
+    let data_slice = unsafe { to_slice_with_lifetime(data) };
+
+    output
+        .write_all(data_slice)
+        .expect("Nothing can go wrong in unsafe code!");
+
+    data.clear();
+}
+
 pub struct DatagenThread<'a> {
     id: u32,
     rng: Rand,
@@ -10,6 +39,7 @@ pub struct DatagenThread<'a> {
     policy: &'a PolicyNetwork,
     positions: Vec<TrainingPosition>,
     skipped: usize,
+    total: usize,
 }
 
 impl<'a> DatagenThread<'a> {
@@ -22,14 +52,25 @@ impl<'a> DatagenThread<'a> {
             policy,
             positions: Vec::new(),
             skipped: 0,
+            total: 0,
         }
     }
 
     pub fn run(&mut self, num_positions: usize) {
         let position = Position::parse_fen(STARTPOS);
 
-        while self.positions.len() < num_positions {
+        let out_path = format!("monty-{}.data", self.id);
+        let mut output = BufWriter::new(File::create(out_path.as_str()).expect("Provide a correct path!"));
+
+        while self.total < num_positions {
             self.run_game(position, self.params.clone(), self.policy);
+
+            let num_in_buffer = self.positions.len();
+            if num_in_buffer > 0 && num_in_buffer % 1024 == 0 {
+                write(&mut self.positions, &mut output);
+                println!("thread {} count {}", self.id, self.total);
+                self.positions.clear();
+            }
         }
     }
 
@@ -79,12 +120,9 @@ impl<'a> DatagenThread<'a> {
                 }
 
                 self.positions.push(training_pos);
+                self.total += 1;
             } else {
                 self.skipped += 1;
-            }
-
-            if self.positions.len() % 1024 == 0 {
-                println!("thread {} count {}", self.id, self.positions.len());
             }
 
             engine.startstack.push(engine.startpos.hash());
