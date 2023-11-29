@@ -1,9 +1,12 @@
 use monty_engine::PolicyNetwork;
-use monty_train::{gradient_batch, TrainingPosition, Rand, to_slice_with_lifetime};
+use monty_train::{gradient_batch, TrainingPosition, Rand};
 
 use std::time::Instant;
 
-unsafe fn data_from_bytes_with_lifetime(raw_bytes: &mut [u8]) -> &mut [TrainingPosition] {
+const BATCH_SIZE: usize = 16_384;
+const LR: f32 = 0.1;
+
+fn data_from_bytes_with_lifetime(raw_bytes: &mut [u8]) -> &mut [TrainingPosition] {
     let src_size = std::mem::size_of_val(raw_bytes);
     let tgt_size = std::mem::size_of::<TrainingPosition>();
 
@@ -13,7 +16,9 @@ unsafe fn data_from_bytes_with_lifetime(raw_bytes: &mut [u8]) -> &mut [TrainingP
     );
 
     let len = src_size / tgt_size;
-    std::slice::from_raw_parts_mut(raw_bytes.as_mut_ptr().cast(), len)
+    unsafe {
+        std::slice::from_raw_parts_mut(raw_bytes.as_mut_ptr().cast(), len)
+    }
 }
 
 fn main() {
@@ -23,8 +28,8 @@ fn main() {
     let threads = args.next().unwrap().parse().unwrap();
     let data_path = args.next().unwrap();
 
-    let raw_bytes = std::fs::read(data_path).unwrap();
-    let data = to_slice_with_lifetime(&raw_bytes);
+    let mut raw_bytes = std::fs::read(data_path).unwrap();
+    let data = data_from_bytes_with_lifetime(&mut raw_bytes);
 
     let mut policy = PolicyNetwork::boxed_and_zeroed();
 
@@ -33,19 +38,16 @@ fn main() {
 
     println!("# [Shuffling Data]");
     let time = Instant::now();
-    //shuffle(data);
+    shuffle(data);
     println!("> Took {:.2} seconds.", time.elapsed().as_secs_f32());
 
-    for iteration in 1..=64 {
+    for iteration in 1..=30 {
         println!("# [Training Epoch {iteration}]");
         train(threads, &mut policy, data);
-
-        policy.write_to_bin(format!("policy-{iteration}.bin").as_str());
     }
-}
 
-const BATCH_SIZE: usize = 16_384;
-const LR: f32 = 1.0;
+    policy.write_to_bin("policy.bin");
+}
 
 fn shuffle(data: &mut [TrainingPosition]) {
     let mut rng = Rand::with_seed();
