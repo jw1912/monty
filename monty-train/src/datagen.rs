@@ -66,7 +66,7 @@ impl<'a> DatagenThread<'a> {
             self.run_game(position, self.params.clone(), self.policy);
 
             let num_in_buffer = self.positions.len();
-            if num_in_buffer > 0 && num_in_buffer % 1024 == 0 {
+            if num_in_buffer > 2048 {
                 write(&mut self.positions, &mut output);
                 println!("thread {} count {}", self.id, self.total);
                 self.positions.clear();
