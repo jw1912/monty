@@ -7,7 +7,7 @@ use crate::{
     },
 };
 
-pub const INDICES: usize = 6 * 64;
+pub const INDICES: usize = 6 + 64;
 pub const FEATURES: usize = 768;
 
 #[repr(C)]
@@ -51,10 +51,34 @@ impl PolicyNetwork {
             file.write_all(slice).unwrap();
         }
     }
+
+    fn get_neuron(&self, idx: usize, pos: &Position) -> f32 {
+        let wref = &self.weights[idx];
+        let flip = pos.flip_val();
+        let mut score = wref[768];
+
+        for piece in Piece::PAWN..=Piece::KING {
+            let pc = 64 * (piece - 2);
+
+            let mut our_bb = pos.piece(piece) & pos.piece(pos.stm());
+            while our_bb > 0 {
+                pop_lsb!(sq, our_bb);
+                score += wref[pc + usize::from(sq ^ flip)];
+            }
+
+            let mut opp_bb = pos.piece(piece) & pos.piece(pos.stm() ^ 1);
+            while opp_bb > 0 {
+                pop_lsb!(sq, opp_bb);
+                score += wref[384 + pc + usize::from(sq ^ flip)];
+            }
+        }
+
+        score
+    }
 }
 
-pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+//pub static POLICY_NETWORK: PolicyNetwork =
+//    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 pub fn hce_policy(mov: &Move, pos: &Position) -> f32 {
     let mut score = 0.0;
@@ -77,28 +101,14 @@ pub fn hce_policy(mov: &Move, pos: &Position) -> f32 {
     score
 }
 
-pub fn get_policy(mov: &Move, pos: &Position, params: &PolicyNetwork) -> f32 {
-    let flip = pos.flip_val();
-    let idx = mov.index(flip);
+pub fn get_policy(mov: &Move, pos: &Position, policy: &PolicyNetwork) -> f32 {
+    let pc = usize::from(mov.moved() - 2);
+    let pc_policy = policy.get_neuron(pc, pos);
 
-    let weights_ref = &params.weights[idx];
-    let mut score = weights_ref[768];
+    let sq = 6 + usize::from(mov.to() ^ pos.flip_val());
+    let sq_policy = policy.get_neuron(sq, pos);
 
-    for piece in Piece::PAWN..=Piece::KING {
-        let pc = 64 * (piece - 2);
+    let hce_policy = hce_policy(mov, pos);
 
-        let mut our_bb = pos.piece(piece) & pos.piece(pos.stm());
-        while our_bb > 0 {
-            pop_lsb!(sq, our_bb);
-            score += weights_ref[pc + usize::from(sq ^ flip)];
-        }
-
-        let mut opp_bb = pos.piece(piece) & pos.piece(pos.stm() ^ 1);
-        while opp_bb > 0 {
-            pop_lsb!(sq, opp_bb);
-            score += weights_ref[384 + pc + usize::from(sq ^ flip)];
-        }
-    }
-
-    score + hce_policy(mov, pos)
+    pc_policy + sq_policy + hce_policy
 }

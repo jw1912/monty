@@ -6,7 +6,7 @@ mod uci;
 use search::{
     mcts::Searcher,
     params::TunableParams,
-    policy::{PolicyNetwork, POLICY_NETWORK},
+    policy::PolicyNetwork,
 };
 use state::position::Position;
 use train::run_training;
@@ -19,7 +19,7 @@ fn main() {
     let mut params = TunableParams::default();
     let mut stack = Vec::new();
     let mut report_moves = false;
-    let mut policy = Box::new(POLICY_NETWORK);
+    let mut policy = PolicyNetwork::boxed_and_zeroed();//Box::new(POLICY_NETWORK);
 
     let mut args = std::env::args();
 
