@@ -1,36 +1,7 @@
-use crate::rng::Rand;
+use crate::{TrainingPosition, Rand};
 
-use monty_core::{GameState, Move, Position, STARTPOS};
+use monty_core::{GameState, Position, STARTPOS};
 use monty_engine::{PolicyNetwork, TunableParams, Searcher};
-
-#[derive(Clone)]
-pub struct TrainingPosition {
-    pub position: Position,
-    pub moves: Vec<(Move, i32)>,
-}
-
-pub fn run_datagen(
-    threads: usize,
-    num_positions: usize,
-    params: TunableParams,
-    policy: &PolicyNetwork,
-) -> Vec<TrainingPosition> {
-    std::thread::scope(|s|
-        (0..threads)
-            .map(|_| {
-                s.spawn(|| {
-                    let mut thread = DatagenThread::new(params.clone(), policy);
-                    thread.run(num_positions);
-                    thread.positions
-                })
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .map(|p| p.join().unwrap())
-            .collect::<Vec<_>>()
-            .concat()
-    )
-}
 
 pub struct DatagenThread<'a> {
     id: u32,
@@ -41,7 +12,7 @@ pub struct DatagenThread<'a> {
 }
 
 impl<'a> DatagenThread<'a> {
-    fn new(params: TunableParams, policy: &'a PolicyNetwork) -> Self {
+    pub fn new(params: TunableParams, policy: &'a PolicyNetwork) -> Self {
         let mut rng = Rand::with_seed();
         Self {
             id: rng.rand_int(),
@@ -52,7 +23,7 @@ impl<'a> DatagenThread<'a> {
         }
     }
 
-    fn run(&mut self, num_positions: usize) {
+    pub fn run(&mut self, num_positions: usize) {
         let position = Position::parse_fen(STARTPOS);
 
         while self.positions.len() < num_positions {
@@ -90,10 +61,7 @@ impl<'a> DatagenThread<'a> {
         loop {
             let (bm, _) = engine.search(None, 128, false, false, &mut 0);
 
-            let mut training_pos = TrainingPosition {
-                position: engine.startpos,
-                moves: Vec::new(),
-            };
+            let mut training_pos = TrainingPosition::new(engine.startpos);
 
             for mov in engine.tree[0].moves.iter() {
                 if mov.ptr() == -1 {
@@ -103,7 +71,7 @@ impl<'a> DatagenThread<'a> {
                 let child = &engine.tree[mov.ptr() as usize];
                 let visits = child.visits();
 
-                training_pos.moves.push((*mov, visits));
+                training_pos.push(mov, visits);
             }
 
             self.positions.push(training_pos);
