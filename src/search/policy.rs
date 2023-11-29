@@ -77,8 +77,8 @@ impl PolicyNetwork {
     }
 }
 
-//pub static POLICY_NETWORK: PolicyNetwork =
-//    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+pub static POLICY_NETWORK: PolicyNetwork =
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 pub fn hce_policy(mov: &Move, pos: &Position) -> f32 {
     let mut score = 0.0;
