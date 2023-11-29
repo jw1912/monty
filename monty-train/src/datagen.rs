@@ -54,11 +54,19 @@ impl<'a> DatagenThread<'a> {
 
             let num_in_buffer = self.positions.len();
             if num_in_buffer > 2048 {
-                write(&mut self.positions, &mut output);
-                println!("thread {} count {}", self.id, self.total);
-                self.positions.clear();
+                self.write(&mut output);
             }
         }
+
+        if !self.positions.is_empty() {
+            self.write(&mut output);
+        }
+    }
+
+    fn write(&mut self, output: &mut BufWriter<File>) {
+        write(&mut self.positions, output);
+        println!("thread {} count {} skipped {}", self.id, self.total, self.skipped);
+        self.positions.clear();
     }
 
     fn run_game(
