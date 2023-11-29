@@ -1,11 +1,7 @@
-use crate::{
-    pop_lsb,
-    state::{
-        consts::{Flag, Piece},
-        moves::Move,
-        position::Position,
-    },
-};
+use monty_core::{Flag, Move, pop_lsb, Position, Piece};
+
+pub static POLICY_NETWORK: PolicyNetwork =
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 pub const INDICES: usize = 6 + 64;
 pub const FEATURES: usize = 768;
@@ -75,40 +71,37 @@ impl PolicyNetwork {
 
         score
     }
-}
 
-pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    pub fn hce(mov: &Move, pos: &Position) -> f32 {
+        let mut score = 0.0;
 
-pub fn hce_policy(mov: &Move, pos: &Position) -> f32 {
-    let mut score = 0.0;
+        if pos.see(mov, -108) {
+            score += 2.0;
+        }
 
-    if pos.see(mov, -108) {
-        score += 2.0;
+        if [Flag::QPR, Flag::QPC].contains(&mov.flag()) {
+            score += 2.0;
+        }
+
+        if mov.is_capture() {
+            score += 2.0;
+
+            let diff = pos.get_pc(1 << mov.to()) as i32 - i32::from(mov.moved());
+            score += 0.2 * diff as f32;
+        }
+
+        score
     }
 
-    if [Flag::QPR, Flag::QPC].contains(&mov.flag()) {
-        score += 2.0;
+    pub fn get(mov: &Move, pos: &Position, policy: &PolicyNetwork) -> f32 {
+        let pc = usize::from(mov.moved() - 2);
+        let pc_policy = policy.get_neuron(pc, pos);
+
+        let sq = 6 + usize::from(mov.to() ^ pos.flip_val());
+        let sq_policy = policy.get_neuron(sq, pos);
+
+        let hce_policy = PolicyNetwork::hce(mov, pos);
+
+        pc_policy + sq_policy + hce_policy
     }
-
-    if mov.is_capture() {
-        score += 2.0;
-
-        let diff = pos.get_pc(1 << mov.to()) as i32 - i32::from(mov.moved());
-        score += 0.2 * diff as f32;
-    }
-
-    score
-}
-
-pub fn get_policy(mov: &Move, pos: &Position, policy: &PolicyNetwork) -> f32 {
-    let pc = usize::from(mov.moved() - 2);
-    let pc_policy = policy.get_neuron(pc, pos);
-
-    let sq = 6 + usize::from(mov.to() ^ pos.flip_val());
-    let sq_policy = policy.get_neuron(sq, pos);
-
-    let hce_policy = hce_policy(mov, pos);
-
-    pc_policy + sq_policy + hce_policy
 }

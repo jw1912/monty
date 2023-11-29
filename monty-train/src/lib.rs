@@ -1,8 +1,10 @@
 mod datagen;
 mod rng;
 
-use crate::{search::{policy::{PolicyNetwork, hce_policy}, params::TunableParams}, state::{consts::Piece, position::Position}, pop_lsb};
-use self::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
+use crate::{datagen::{run_datagen, TrainingPosition}, rng::Rand};
+
+use monty_core::{Piece, Position, pop_lsb};
+use monty_engine::{PolicyNetwork, TunableParams};
 
 const DATAGEN_SIZE: usize = 16_384;
 const BATCH_SIZE: usize = 1_024;
@@ -118,7 +120,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     let flip = pos.position.flip_val();
 
     for (mov, visits) in &pos.moves {
-        let mut score = hce_policy(mov, &pos.position);
+        let mut score = PolicyNetwork::hce(mov, &pos.position);
 
         let pc = usize::from(mov.moved() - 2);
         let sq = 6 + usize::from(mov.to() ^ flip);

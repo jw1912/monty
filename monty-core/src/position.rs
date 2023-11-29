@@ -1,11 +1,9 @@
 use crate::{
     pop_lsb,
-    search::value::{Accumulator, ValueNetwork},
-    state::{
-        attacks::Attacks,
-        consts::*,
-        moves::{Move, MoveList},
-    },
+    value::{Accumulator, ValueNetwork},
+    attacks::Attacks,
+    consts::*,
+    moves::{Move, MoveList},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]

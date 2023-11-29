@@ -1,8 +1,7 @@
-use crate::{
-    search::{mcts::Searcher, params::TunableParams, policy::PolicyNetwork},
-    state::{moves::Move, position::{GameState, Position}},
-    train::rng::Rand, uci::STARTPOS,
-};
+use crate::rng::Rand;
+
+use monty_core::{GameState, Move, Position, STARTPOS};
+use monty_engine::{PolicyNetwork, TunableParams, Searcher};
 
 #[derive(Clone)]
 pub struct TrainingPosition {
