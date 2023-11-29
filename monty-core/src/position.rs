@@ -181,7 +181,7 @@ impl Position {
 
     #[must_use]
     pub fn get_pc(&self, bit: u64) -> usize {
-        for pc in Piece::PAWN..=Piece::QUEEN {
+        for pc in Piece::PAWN..=Piece::KING {
             if bit & self.bb[pc] > 0 {
                 return pc;
             }
