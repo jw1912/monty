@@ -1,26 +1,44 @@
 use monty_engine::PolicyNetwork;
 use monty_train::{gradient_batch, TrainingPosition, Rand};
 
-fn main() {
+use std::time::Instant;
 
+fn data_from_bytes_with_lifetime(raw_bytes: &mut [u8]) -> &mut [TrainingPosition] {
+    unsafe { std::mem::transmute(raw_bytes) }
 }
 
-fn run_training(threads: usize, data: &[TrainingPosition]) {
+fn main() {
+    let mut args = std::env::args();
+    args.next();
+
+    let threads = args.next().unwrap().parse().unwrap();
+    let data_path = args.next().unwrap();
+
+    let mut raw_bytes = std::fs::read(data_path).unwrap();
+    let data = data_from_bytes_with_lifetime(&mut raw_bytes);
+
     let mut policy = PolicyNetwork::boxed_and_zeroed();
 
+    println!("# [Info]");
+    println!("> {} Positions", data.len());
+
+    println!("# [Shuffling Data]");
+    let time = Instant::now();
+    shuffle(data);
+    println!("> Took {:.2} seconds.", time.elapsed().as_secs_f32());
+
     for iteration in 1..=64 {
-        println!("# [Training]");
+        println!("# [Training Epoch {iteration}]");
         train(threads, &mut policy, data);
 
         policy.write_to_bin(format!("policy-{iteration}.bin").as_str());
     }
 }
 
-const DATAGEN_SIZE: usize = 16_384;
-const BATCH_SIZE: usize = 1_024;
+const BATCH_SIZE: usize = 16_384;
 const LR: f32 = 1.0;
 
-fn shuffle(data: &mut Vec<TrainingPosition>) {
+fn shuffle(data: &mut [TrainingPosition]) {
     let mut rng = Rand::with_seed();
 
     for _ in 0..data.len() * 4 {
@@ -47,7 +65,7 @@ fn train(threads: usize, policy: &mut PolicyNetwork, data: &[TrainingPosition]) 
     println!("> Running Loss: {}", running_error / data.len() as f32);
 
     let mut grad = PolicyNetwork::boxed_and_zeroed();
-    let error = gradient_batch(threads, policy, &mut grad, &data);
+    let error = gradient_batch(threads, policy, &mut grad, data);
     println!("> After Loss: {}", error / data.len() as f32);
 }
 

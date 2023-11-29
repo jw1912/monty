@@ -32,13 +32,13 @@ impl TrainingMove {
 
 #[derive(Clone)]
 pub struct TrainingMoveList {
-    list: [TrainingMove; 218],
+    list: [TrainingMove; 106],
     len: usize,
 }
 
 impl Default for TrainingMoveList {
     fn default() -> Self {
-        Self { list: [TrainingMove::default(); 218], len: 0 }
+        Self { list: [TrainingMove::default(); 106], len: 0 }
     }
 }
 

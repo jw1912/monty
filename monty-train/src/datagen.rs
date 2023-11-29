@@ -9,6 +9,7 @@ pub struct DatagenThread<'a> {
     params: TunableParams,
     policy: &'a PolicyNetwork,
     positions: Vec<TrainingPosition>,
+    skipped: usize,
 }
 
 impl<'a> DatagenThread<'a> {
@@ -20,6 +21,7 @@ impl<'a> DatagenThread<'a> {
             params,
             policy,
             positions: Vec::new(),
+            skipped: 0,
         }
     }
 
@@ -61,20 +63,26 @@ impl<'a> DatagenThread<'a> {
         loop {
             let (bm, _) = engine.search(None, 128, false, false, &mut 0);
 
-            let mut training_pos = TrainingPosition::new(engine.startpos);
+            // disallow positions with >106 moves
+            if engine.tree[0].moves.len() <= 106 {
+                let mut training_pos = TrainingPosition::new(engine.startpos);
 
-            for mov in engine.tree[0].moves.iter() {
-                if mov.ptr() == -1 {
-                    continue;
+                for mov in engine.tree[0].moves.iter() {
+                    if mov.ptr() == -1 {
+                        continue;
+                    }
+
+                    let child = &engine.tree[mov.ptr() as usize];
+                    let visits = child.visits();
+
+                    training_pos.push(mov, visits);
                 }
 
-                let child = &engine.tree[mov.ptr() as usize];
-                let visits = child.visits();
-
-                training_pos.push(mov, visits);
+                self.positions.push(training_pos);
+            } else {
+                self.skipped += 1;
             }
 
-            self.positions.push(training_pos);
             if self.positions.len() % 1024 == 0 {
                 println!("thread {} count {}", self.id, self.positions.len());
             }
