@@ -1,6 +1,7 @@
 use monty_core::{Move, Position, Piece, pop_lsb};
 
-#[derive(Clone, Copy, Default)]
+#[repr(C)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct TrainingMove {
     mov: u16,
     visits: u16,
@@ -30,6 +31,7 @@ impl TrainingMove {
     }
 }
 
+#[repr(C)]
 #[derive(Clone)]
 pub struct TrainingMoveList {
     list: [TrainingMove; 106],
@@ -42,10 +44,21 @@ impl Default for TrainingMoveList {
     }
 }
 
+#[repr(C)]
 #[derive(Clone)]
 pub struct TrainingPosition {
     position: Position,
     moves: TrainingMoveList,
+}
+
+impl std::fmt::Debug for TrainingPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "FEN: {}", self.board().to_fen())?;
+        for mov in self.moves() {
+            writeln!(f, "{}", mov.mov(self.board()).to_uci())?;
+        }
+        Ok(())
+    }
 }
 
 impl TrainingPosition {

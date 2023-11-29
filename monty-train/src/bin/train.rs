@@ -1,10 +1,19 @@
 use monty_engine::PolicyNetwork;
-use monty_train::{gradient_batch, TrainingPosition, Rand};
+use monty_train::{gradient_batch, TrainingPosition, Rand, to_slice_with_lifetime};
 
 use std::time::Instant;
 
-fn data_from_bytes_with_lifetime(raw_bytes: &mut [u8]) -> &mut [TrainingPosition] {
-    unsafe { std::mem::transmute(raw_bytes) }
+unsafe fn data_from_bytes_with_lifetime(raw_bytes: &mut [u8]) -> &mut [TrainingPosition] {
+    let src_size = std::mem::size_of_val(raw_bytes);
+    let tgt_size = std::mem::size_of::<TrainingPosition>();
+
+    assert!(
+        src_size % tgt_size == 0,
+        "Target type size does not divide slice size!"
+    );
+
+    let len = src_size / tgt_size;
+    std::slice::from_raw_parts_mut(raw_bytes.as_mut_ptr().cast(), len)
 }
 
 fn main() {
@@ -14,8 +23,8 @@ fn main() {
     let threads = args.next().unwrap().parse().unwrap();
     let data_path = args.next().unwrap();
 
-    let mut raw_bytes = std::fs::read(data_path).unwrap();
-    let data = data_from_bytes_with_lifetime(&mut raw_bytes);
+    let raw_bytes = std::fs::read(data_path).unwrap();
+    let data = to_slice_with_lifetime(&raw_bytes);
 
     let mut policy = PolicyNetwork::boxed_and_zeroed();
 
@@ -24,7 +33,7 @@ fn main() {
 
     println!("# [Shuffling Data]");
     let time = Instant::now();
-    shuffle(data);
+    //shuffle(data);
     println!("> Took {:.2} seconds.", time.elapsed().as_secs_f32());
 
     for iteration in 1..=64 {

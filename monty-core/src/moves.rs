@@ -8,7 +8,7 @@ macro_rules! pop_lsb {
     };
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Move {
     from: u8,
     to: u8,

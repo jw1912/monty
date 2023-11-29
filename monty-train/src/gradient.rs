@@ -46,6 +46,8 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         let pc = usize::from(mov.moved() - 2);
         let sq = 6 + usize::from(mov.to() ^ flip);
 
+        assert!(pc < 6, "{pos:?}");
+
         for &feat in &feats {
             score += policy.weights[pc][feat];
             score += policy.weights[sq][feat];
