@@ -70,17 +70,17 @@ fn train(threads: usize, policy: &mut PolicyNetwork, data: &[TrainingPosition], 
     for batch in data.chunks(BATCH_SIZE) {
         let mut grad = PolicyNetwork::boxed_and_zeroed();
         running_error += gradient_batch(threads, policy, &mut grad, batch);
-        let adj = lr / batch.len() as f32;
-        update(policy, &grad, adj);
+        let adj = 2.0 / batch.len() as f32;
+        update(policy, &grad, adj, lr);
     }
 
     println!("> Running Loss: {}", running_error / data.len() as f32);
 }
 
-fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork, adj: f32) {
+fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork, adj: f32, lr: f32) {
     for i in 0..NetworkDims::INDICES {
         for j in 0..NetworkDims::FEATURES {
-            policy.weights[i][j] -= adj * grad.weights[i][j];
+            policy.weights[i][j] -= lr * adj * grad.weights[i][j];
         }
     }
 }

@@ -70,7 +70,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         *error += err * err;
 
         let dp = (total - score) / total.powi(2);
-        let adj = 2.0 * err * score * dp;
+        let adj = err * score * dp;
 
         assert!(!adj.is_nan() && !adj.is_infinite());
 
