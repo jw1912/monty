@@ -6,7 +6,7 @@ pub static POLICY_NETWORK: PolicyNetwork =
 pub struct NetworkDims;
 
 impl NetworkDims {
-    pub const INDICES: usize = 70;
+    pub const INDICES: usize = 64;
     pub const FEATURES: usize = 769;
 }
 
@@ -98,14 +98,11 @@ impl PolicyNetwork {
     }
 
     pub fn get(mov: &Move, pos: &Position, policy: &PolicyNetwork) -> f32 {
-        let pc = usize::from(mov.moved() - 2);
-        let pc_policy = policy.get_neuron(pc, pos);
-
-        let sq = 6 + usize::from(mov.to() ^ pos.flip_val());
+        let sq = usize::from(mov.to() ^ pos.flip_val());
         let sq_policy = policy.get_neuron(sq, pos);
 
         let hce_policy = PolicyNetwork::hce(mov, pos);
 
-        pc_policy + sq_policy + hce_policy
+        sq_policy + hce_policy
     }
 }

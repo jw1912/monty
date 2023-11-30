@@ -44,11 +44,11 @@ fn main() {
     let mut momentum = PolicyNetwork::boxed_and_zeroed();
     let mut velocity = PolicyNetwork::boxed_and_zeroed();
 
-    for iteration in 1..=30 {
+    for iteration in 1..=20 {
         println!("# [Training Epoch {iteration}]");
         train(threads, &mut policy, data, lr, &mut momentum, &mut velocity);
 
-        if iteration % 10 == 0 {
+        if iteration % 7 == 0 {
             lr *= 0.1;
         }
         policy.write_to_bin("policy.bin");

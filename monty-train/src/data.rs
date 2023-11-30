@@ -55,7 +55,7 @@ impl std::fmt::Debug for TrainingPosition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "FEN: {}", self.board().to_fen())?;
         for mov in self.moves() {
-            writeln!(f, "{}", mov.mov(self.board()).to_uci())?;
+            writeln!(f, "{}: {}", mov.mov(self.board()).to_uci(), mov.visits)?;
         }
         Ok(())
     }
