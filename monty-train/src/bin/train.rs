@@ -40,18 +40,19 @@ fn main() {
     shuffle(data);
     println!("> Took {:.2} seconds.", time.elapsed().as_secs_f32());
 
-    let mut lr = 0.1;
+    let mut lr = 0.001;
+    let mut momentum = PolicyNetwork::boxed_and_zeroed();
+    let mut velocity = PolicyNetwork::boxed_and_zeroed();
 
     for iteration in 1..=30 {
         println!("# [Training Epoch {iteration}]");
-        train(threads, &mut policy, data, lr);
+        train(threads, &mut policy, data, lr, &mut momentum, &mut velocity);
 
         if iteration % 10 == 0 {
             lr *= 0.1;
         }
+        policy.write_to_bin("policy.bin");
     }
-
-    policy.write_to_bin("policy.bin");
 }
 
 fn shuffle(data: &mut [TrainingPosition]) {
@@ -64,23 +65,48 @@ fn shuffle(data: &mut [TrainingPosition]) {
     }
 }
 
-fn train(threads: usize, policy: &mut PolicyNetwork, data: &[TrainingPosition], lr: f32) {
+fn train(
+    threads: usize,
+    policy: &mut PolicyNetwork,
+    data: &[TrainingPosition],
+    lr: f32,
+    momentum: &mut PolicyNetwork,
+    velocity: &mut PolicyNetwork,
+) {
     let mut running_error = 0.0;
 
     for batch in data.chunks(BATCH_SIZE) {
         let mut grad = PolicyNetwork::boxed_and_zeroed();
         running_error += gradient_batch(threads, policy, &mut grad, batch);
         let adj = 2.0 / batch.len() as f32;
-        update(policy, &grad, adj, lr);
+        update(policy, &grad, adj, lr, momentum, velocity);
     }
 
     println!("> Running Loss: {}", running_error / data.len() as f32);
 }
 
-fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork, adj: f32, lr: f32) {
+const B1: f32 = 0.9;
+const B2: f32 = 0.999;
+
+fn update(
+    policy: &mut PolicyNetwork,
+    grad: &PolicyNetwork,
+    adj: f32,
+    lr: f32,
+    momentum: &mut PolicyNetwork,
+    velocity: &mut PolicyNetwork,
+) {
     for i in 0..NetworkDims::INDICES {
         for j in 0..NetworkDims::FEATURES {
-            policy.weights[i][j] -= lr * adj * grad.weights[i][j];
+            let g = adj * grad.weights[i][j];
+            let m = &mut momentum.weights[i][j];
+            let v = &mut velocity.weights[i][j];
+            let p = &mut policy.weights[i][j];
+
+            *m = B1 * *m + (1. - B1) * g;
+            *v = B2 * *v + (1. - B2) * g * g;
+            *p -= lr * *m / (v.sqrt() + 0.000_000_01);
+            assert!(!p.is_nan() && !p.is_infinite(), "{}, {}, {}, {}", *p, g, *m, *v);
         }
     }
 }

@@ -64,15 +64,17 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         let pc = usize::from(mov.moved() - 2);
         let sq = 6 + usize::from(mov.to() ^ pos.board().flip_val());
 
+        let ratio = score / total;
+
         let expected = visits as f32 / total_visits as f32;
-        let err = score / total - expected;
+        let err = ratio - expected;
 
         *error += err * err;
 
-        let dp = (total - score) / total.powi(2);
+        let dp = (1.0 - ratio) / total;
         let adj = err * score * dp;
 
-        assert!(!adj.is_nan() && !adj.is_infinite());
+        assert!(!adj.is_nan() && !adj.is_infinite(), "{score} {visits} {dp} {adj} {total}");
 
         for &feat in &feats {
             grad.weights[pc][feat] += adj;
