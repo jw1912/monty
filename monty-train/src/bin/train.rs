@@ -1,10 +1,9 @@
-use monty_engine::PolicyNetwork;
+use monty_engine::{PolicyNetwork, NetworkDims};
 use monty_train::{gradient_batch, TrainingPosition, Rand};
 
 use std::time::Instant;
 
 const BATCH_SIZE: usize = 16_384;
-const LR: f32 = 0.1;
 
 fn data_from_bytes_with_lifetime(raw_bytes: &mut [u8]) -> &mut [TrainingPosition] {
     let src_size = std::mem::size_of_val(raw_bytes);
@@ -41,9 +40,15 @@ fn main() {
     shuffle(data);
     println!("> Took {:.2} seconds.", time.elapsed().as_secs_f32());
 
+    let mut lr = 0.1;
+
     for iteration in 1..=30 {
         println!("# [Training Epoch {iteration}]");
-        train(threads, &mut policy, data);
+        train(threads, &mut policy, data, lr);
+
+        if iteration % 10 == 0 {
+            lr *= 0.1;
+        }
     }
 
     policy.write_to_bin("policy.bin");
@@ -59,31 +64,23 @@ fn shuffle(data: &mut [TrainingPosition]) {
     }
 }
 
-fn train(threads: usize, policy: &mut PolicyNetwork, data: &[TrainingPosition]) {
-    let mut grad = PolicyNetwork::boxed_and_zeroed();
-    let error = gradient_batch(threads, policy, &mut grad, data);
-    println!("> Before Loss: {}", error / data.len() as f32);
-
+fn train(threads: usize, policy: &mut PolicyNetwork, data: &[TrainingPosition], lr: f32) {
     let mut running_error = 0.0;
 
     for batch in data.chunks(BATCH_SIZE) {
         let mut grad = PolicyNetwork::boxed_and_zeroed();
         running_error += gradient_batch(threads, policy, &mut grad, batch);
-        let adj = LR / batch.len() as f32;
+        let adj = lr / batch.len() as f32;
         update(policy, &grad, adj);
     }
 
     println!("> Running Loss: {}", running_error / data.len() as f32);
-
-    let mut grad = PolicyNetwork::boxed_and_zeroed();
-    let error = gradient_batch(threads, policy, &mut grad, data);
-    println!("> After Loss: {}", error / data.len() as f32);
 }
 
 fn update(policy: &mut PolicyNetwork, grad: &PolicyNetwork, adj: f32) {
-    for (i, j) in policy.weights.iter_mut().zip(grad.weights.iter()) {
-        for (a, b) in i.iter_mut().zip(j.iter()) {
-            *a -= adj * *b;
+    for i in 0..NetworkDims::INDICES {
+        for j in 0..NetworkDims::FEATURES {
+            policy.weights[i][j] -= adj * grad.weights[i][j];
         }
     }
 }

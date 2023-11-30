@@ -3,13 +3,17 @@ use monty_core::{Flag, Move, pop_lsb, Position, Piece};
 pub static POLICY_NETWORK: PolicyNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
-pub const INDICES: usize = 6 + 64;
-pub const FEATURES: usize = 768;
+pub struct NetworkDims;
+
+impl NetworkDims {
+    pub const INDICES: usize = 70;
+    pub const FEATURES: usize = 769;
+}
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    pub weights: [[f32; FEATURES + 1]; INDICES],
+    pub weights: [[f32; NetworkDims::FEATURES]; NetworkDims::INDICES],
 }
 
 impl std::ops::AddAssign<&PolicyNetwork> for PolicyNetwork {

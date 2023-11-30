@@ -72,6 +72,8 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         let dp = (total - score) / total.powi(2);
         let adj = 2.0 * err * score * dp;
 
+        assert!(!adj.is_nan() && !adj.is_infinite());
+
         for &feat in &feats {
             grad.weights[pc][feat] += adj;
             grad.weights[sq][feat] += adj;
