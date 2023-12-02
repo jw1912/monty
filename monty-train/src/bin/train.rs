@@ -95,7 +95,6 @@ fn update(
             *m = B1 * *m + (1. - B1) * g;
             *v = B2 * *v + (1. - B2) * g * g;
             *p -= lr * *m / (v.sqrt() + 0.000_000_01);
-            assert!(!p.is_nan() && !p.is_infinite(), "{}, {}, {}, {}", *p, g, *m, *v);
         }
     }
 }

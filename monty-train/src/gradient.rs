@@ -1,6 +1,6 @@
 use crate::TrainingPosition;
 
-use monty_engine::PolicyNetwork;
+use monty_engine::{PolicyNetwork, PolicyVal};
 
 pub fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) -> f32 {
     let size = (batch.len() / threads).max(1);
@@ -41,28 +41,30 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     for training_mov in pos.moves() {
         let mov = training_mov.mov(pos.board());
         let visits = training_mov.visits();
-
-        let mut score = PolicyNetwork::hce(&mov, pos.board());
         let idx = mov.index(flip);
 
+        let mut pair = PolicyVal::default();
+
         for &feat in feats.iter() {
-            score += policy.weights[idx][feat];
+            pair += policy.weights[idx][feat];
         }
+
+        let score = pair.out() + PolicyNetwork::hce(&mov, pos.board());
 
         if score > max {
             max = score;
         }
 
         total_visits += visits;
-        policies.push((mov, visits, score));
+        policies.push((mov, visits, score, pair));
     }
 
-    for (_, _, score) in policies.iter_mut() {
+    for (_, _, score, _) in policies.iter_mut() {
         *score = (*score - max).exp();
         total += *score;
     }
 
-    for (mov, visits, score) in policies {
+    for (mov, visits, score, pair) in policies {
         let idx = mov.index(flip);
 
         let ratio = score / total;
@@ -72,7 +74,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         *error += err * err;
 
-        let adj = err * ratio * (1.0 - ratio);
+        let adj = (err * ratio * (1.0 - ratio)) * pair;
 
         for &feat in feats.iter() {
             grad.weights[idx][feat] += adj;

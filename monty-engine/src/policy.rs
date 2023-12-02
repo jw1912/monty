@@ -1,10 +1,75 @@
 use monty_core::{Flag, Move, Position, FeatureList};
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+PolicyNetwork {weights: [[PolicyVal {left: 0.0, right: 0.0}; NetworkDims::FEATURES]; NetworkDims::INDICES],};
+
+#[derive(Clone, Copy, Default)]
+pub struct PolicyVal {
+    left: f32,
+    right: f32,
+}
+
+impl std::ops::Add<PolicyVal> for PolicyVal {
+    type Output = PolicyVal;
+    fn add(self, rhs: PolicyVal) -> Self::Output {
+        PolicyVal { left: self.left + rhs.left, right: self.right + rhs.right }
+    }
+}
+
+impl std::ops::Add<f32> for PolicyVal {
+    type Output = PolicyVal;
+    fn add(self, rhs: f32) -> Self::Output {
+        PolicyVal { left: self.left + rhs, right: self.right + rhs }
+    }
+}
+
+impl std::ops::AddAssign<PolicyVal> for PolicyVal {
+    fn add_assign(&mut self, rhs: PolicyVal) {
+        self.left += rhs.left;
+        self.right += rhs.right;
+    }
+}
+
+impl std::ops::Div<PolicyVal> for PolicyVal {
+    type Output = PolicyVal;
+    fn div(self, rhs: PolicyVal) -> Self::Output {
+        PolicyVal { left: self.left / rhs.left, right: self.right / rhs.right }
+    }
+}
+
+impl std::ops::Mul<PolicyVal> for PolicyVal {
+    type Output = PolicyVal;
+    fn mul(self, rhs: PolicyVal) -> Self::Output {
+        PolicyVal { left: self.left * rhs.left, right: self.right * rhs.right }
+    }
+}
+
+impl std::ops::Mul<PolicyVal> for f32 {
+    type Output = PolicyVal;
+    fn mul(self, rhs: PolicyVal) -> Self::Output {
+        PolicyVal { left: self * rhs.left, right: self * rhs.right }
+    }
+}
+
+impl std::ops::SubAssign<PolicyVal> for PolicyVal {
+    fn sub_assign(&mut self, rhs: PolicyVal) {
+        self.left -= rhs.left;
+        self.right -= rhs.right;
+    }
+}
+
+impl PolicyVal {
+    pub fn out(&self) -> f32 {
+        self.left.max(0.0) * self.right.max(0.0)
+    }
+
+    pub fn sqrt(self) -> Self {
+        Self { left: self.left.sqrt(), right: self.right.sqrt() }
+    }
+}
 
 pub struct NetworkDims;
-
 impl NetworkDims {
     pub const INDICES: usize = 6 * 64;
     pub const FEATURES: usize = 769;
@@ -13,7 +78,7 @@ impl NetworkDims {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    pub weights: [[f32; NetworkDims::FEATURES]; NetworkDims::INDICES],
+    pub weights: [[PolicyVal; NetworkDims::FEATURES]; NetworkDims::INDICES],
 }
 
 impl std::ops::AddAssign<&PolicyNetwork> for PolicyNetwork {
@@ -54,13 +119,13 @@ impl PolicyNetwork {
 
     fn get_neuron(&self, idx: usize, feats: &FeatureList) -> f32 {
         let wref = &self.weights[idx];
-        let mut score = 0.0;
+        let mut score = PolicyVal::default();
 
         for &feat in feats.iter() {
             score += wref[feat];
         }
 
-        score
+        score.out()
     }
 
     pub fn hce(mov: &Move, pos: &Position) -> f32 {
