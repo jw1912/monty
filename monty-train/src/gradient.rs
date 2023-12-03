@@ -74,7 +74,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         *error += err * err;
 
-        let adj = (err * ratio * (1.0 - ratio)) * pair;
+        let adj = (err * ratio * (1.0 - ratio)) * pair.derivative() * pair.swap_relu();
 
         for &feat in feats.iter() {
             grad.weights[idx][feat] += adj;

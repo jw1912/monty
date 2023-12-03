@@ -1,5 +1,5 @@
-use monty_engine::{PolicyNetwork, NetworkDims};
-use monty_train::{gradient_batch, TrainingPosition, to_slice_with_lifetime};
+use monty_engine::{PolicyNetwork, NetworkDims, PolicyVal};
+use monty_train::{gradient_batch, TrainingPosition, to_slice_with_lifetime, Rand};
 
 use std::{fs::File, io::{BufReader, BufRead}};
 
@@ -15,6 +15,12 @@ fn main() {
     let file = File::open(data_path.clone()).unwrap();
 
     let mut policy = PolicyNetwork::boxed_and_zeroed();
+    let mut rng = Rand::with_seed();
+    for i in 0..NetworkDims::INDICES {
+        for j in 0..NetworkDims::FEATURES {
+            policy.weights[i][j] = PolicyVal::from_raw(rng.rand_f32(0.2), rng.rand_f32(0.2));
+        }
+    }
 
     println!("# [Info]");
     println!(

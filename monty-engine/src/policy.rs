@@ -1,8 +1,7 @@
 use monty_core::{Flag, Move, Position, FeatureList};
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
-PolicyNetwork {weights: [[PolicyVal {left: 0.0, right: 0.0}; NetworkDims::FEATURES]; NetworkDims::INDICES],};
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 #[derive(Clone, Copy, Default)]
 pub struct PolicyVal {
@@ -66,6 +65,21 @@ impl PolicyVal {
 
     pub fn sqrt(self) -> Self {
         Self { left: self.left.sqrt(), right: self.right.sqrt() }
+    }
+
+    pub fn from_raw(left: f32, right: f32) -> Self {
+        Self { left, right }
+    }
+
+    pub fn derivative(self) -> Self {
+        Self {
+            left: if self.left > 0.0 {1.0} else {0.0},
+            right: if self.right > 0.0 {1.0} else {0.0},
+        }
+    }
+
+    pub fn swap_relu(self) -> Self {
+        Self { left: self.right.max(0.0), right: self.left.max(0.0) }
     }
 }
 
