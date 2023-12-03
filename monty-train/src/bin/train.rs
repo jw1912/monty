@@ -18,7 +18,11 @@ fn main() {
     let mut rng = Rand::with_seed();
     for i in 0..NetworkDims::INDICES {
         for j in 0..NetworkDims::FEATURES {
-            policy.weights[i][j] = PolicyVal::from_raw(rng.rand_f32(0.2), rng.rand_f32(0.2));
+            let mut val = [0.0; NetworkDims::NEURONS];
+            for v in val.iter_mut() {
+                *v = rng.rand_f32(0.2);
+            }
+            policy.weights[i][j] = PolicyVal::from_raw(val);
         }
     }
 
@@ -102,5 +106,16 @@ fn update(
             *v = B2 * *v + (1. - B2) * g * g;
             *p -= lr * *m / (v.sqrt() + 0.000_000_01);
         }
+    }
+
+    for i in 0..NetworkDims::NEURONS {
+        let g = adj * grad.outputs[i];
+        let m = &mut momentum.outputs[i];
+        let v = &mut velocity.outputs[i];
+        let p = &mut policy.outputs[i];
+
+        *m = B1 * *m + (1. - B1) * g;
+        *v = B2 * *v + (1. - B2) * g * g;
+        *p -= lr * *m / (v.sqrt() + 0.000_000_01);
     }
 }

@@ -43,20 +43,20 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         let visits = training_mov.visits();
         let idx = mov.index(flip);
 
-        let mut pair = PolicyVal::default();
+        let mut hidden = PolicyVal::default();
 
         for &feat in feats.iter() {
-            pair += policy.weights[idx][feat];
+            hidden += policy.weights[idx][feat];
         }
 
-        let score = pair.out() + PolicyNetwork::hce(&mov, pos.board());
+        let score = hidden.out(policy) + PolicyNetwork::hce(&mov, pos.board());
 
         if score > max {
             max = score;
         }
 
         total_visits += visits;
-        policies.push((mov, visits, score, pair));
+        policies.push((mov, visits, score, hidden));
     }
 
     for (_, _, score, _) in policies.iter_mut() {
@@ -64,7 +64,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         total += *score;
     }
 
-    for (mov, visits, score, pair) in policies {
+    for (mov, visits, score, hidden) in policies {
         let idx = mov.index(flip);
 
         let ratio = score / total;
@@ -74,7 +74,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         *error += err * err;
 
-        let adj = (err * ratio * (1.0 - ratio)) * pair.derivative() * pair.swap_relu();
+        let adj = (err * ratio * (1.0 - ratio)) * hidden.derivative();
 
         for &feat in feats.iter() {
             grad.weights[idx][feat] += adj;
