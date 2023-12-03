@@ -40,13 +40,14 @@ fn main() {
     let mut momentum = PolicyNetwork::boxed_and_zeroed();
     let mut velocity = PolicyNetwork::boxed_and_zeroed();
 
-    for iteration in 1..=20 {
+    for iteration in 1..=12 {
         println!("# [Training Epoch {iteration}]");
         train(threads, &mut policy, lr, &mut momentum, &mut velocity, data_path.as_str());
 
         if iteration % 8 == 0 {
             lr *= 0.1;
         }
+        println!("{:?}", policy.hce);
         policy.write_to_bin("policy.bin");
     }
 }
@@ -117,6 +118,17 @@ fn update(
         let m = &mut momentum.outputs[i];
         let v = &mut velocity.outputs[i];
         let p = &mut policy.outputs[i];
+
+        *m = B1 * *m + (1. - B1) * g;
+        *v = B2 * *v + (1. - B2) * g * g;
+        *p -= lr * *m / (v.sqrt() + 0.000_000_01);
+    }
+
+    for i in 0..NetworkDims::HCE {
+        let g = adj * grad.hce[i];
+        let m = &mut momentum.hce[i];
+        let v = &mut velocity.hce[i];
+        let p = &mut policy.hce[i];
 
         *m = B1 * *m + (1. - B1) * g;
         *v = B2 * *v + (1. - B2) * g * g;
