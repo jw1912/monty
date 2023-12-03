@@ -1,6 +1,6 @@
 use crate::TrainingPosition;
 
-use monty_engine::{PolicyNetwork, PolicyVal};
+use monty_engine::{PolicyNetwork, PolicyVal, NetworkDims};
 
 pub fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) -> f32 {
     let size = (batch.len() / threads).max(1);
@@ -74,10 +74,15 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         *error += err * err;
 
-        let adj = (err * ratio * (1.0 - ratio)) * hidden.derivative();
+        let factor = err * ratio * (1.0 - ratio);
+        let adj = factor * hidden.derivative();
 
         for &feat in feats.iter() {
             grad.weights[idx][feat] += adj;
+        }
+
+        for i in 0..NetworkDims::NEURONS {
+            grad.outputs[i] += factor * hidden[i].max(0.0);
         }
     }
 }

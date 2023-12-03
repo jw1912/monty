@@ -26,6 +26,10 @@ fn main() {
         }
     }
 
+    for i in 0..NetworkDims::NEURONS {
+        policy.outputs[i] = rng.rand_f32(0.1);
+    }
+
     println!("# [Info]");
     println!(
         "> {} Positions",

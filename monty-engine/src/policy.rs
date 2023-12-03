@@ -27,6 +27,13 @@ pub struct PolicyVal {
     inner: [f32; NetworkDims::NEURONS],
 }
 
+impl std::ops::Index<usize> for PolicyVal {
+    type Output = f32;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.inner[index]
+    }
+}
+
 impl std::ops::Add<PolicyVal> for PolicyVal {
     type Output = PolicyVal;
     fn add(mut self, rhs: PolicyVal) -> Self::Output {
