@@ -1,17 +1,13 @@
 use monty_core::{Flag, Move, Position, FeatureList};
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
-PolicyNetwork {
-    weights: [[PolicyVal::from_raw([0.0; NetworkDims::NEURONS]); NetworkDims::FEATURES]; NetworkDims::INDICES],
-    outputs: [0.0; NetworkDims::NEURONS],
-};
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 pub struct NetworkDims;
 impl NetworkDims {
     pub const INDICES: usize = 6 * 64;
     pub const FEATURES: usize = 769;
-    pub const NEURONS: usize = 8;
+    pub const NEURONS: usize = 16;
 }
 
 #[repr(C)]
