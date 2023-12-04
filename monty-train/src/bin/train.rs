@@ -4,6 +4,8 @@ use monty_train::{gradient_batch, TrainingPosition, to_slice_with_lifetime, Rand
 use std::{fs::File, io::{BufReader, BufRead, Write}};
 
 const BATCH_SIZE: usize = 16_384;
+const EPOCHS: usize = 10;
+const LR_DROP: usize = 7;
 
 fn main() {
     let mut args = std::env::args();
@@ -40,15 +42,15 @@ fn main() {
     let mut momentum = PolicyNetwork::boxed_and_zeroed();
     let mut velocity = PolicyNetwork::boxed_and_zeroed();
 
-    for iteration in 1..=12 {
+    for iteration in 1..=EPOCHS {
         println!("# [Training Epoch {iteration}]");
         train(threads, &mut policy, lr, &mut momentum, &mut velocity, data_path.as_str());
 
-        if iteration % 8 == 0 {
+        if iteration % LR_DROP == 0 {
             lr *= 0.1;
         }
         println!("{:?}", policy.hce);
-        policy.write_to_bin("policy.bin");
+        policy.write_to_bin(format!("resources/policy-{iteration}.bin").as_str());
     }
 }
 
