@@ -1,7 +1,7 @@
 use monty_engine::{PolicyNetwork, NetworkDims, PolicyVal};
 use monty_train::{gradient_batch, TrainingPosition, to_slice_with_lifetime, Rand};
 
-use std::{fs::File, io::{BufReader, BufRead}};
+use std::{fs::File, io::{BufReader, BufRead, Write}};
 
 const BATCH_SIZE: usize = 16_384;
 
@@ -65,7 +65,10 @@ fn train(
 
     let cap = 128 * BATCH_SIZE * std::mem::size_of::<TrainingPosition>();
     let file = File::open(path).unwrap();
+    let size = file.metadata().unwrap().len() as usize / std::mem::size_of::<TrainingPosition>();
     let mut loaded = BufReader::with_capacity(cap, file);
+    let mut batch_no = 0;
+    let num_batches = (size + BATCH_SIZE - 1) / BATCH_SIZE;
 
     while let Ok(buf) = loaded.fill_buf() {
         if buf.is_empty() {
@@ -79,6 +82,10 @@ fn train(
             running_error += gradient_batch(threads, policy, &mut grad, batch);
             let adj = 2.0 / batch.len() as f32;
             update(policy, &grad, adj, lr, momentum, velocity);
+
+            batch_no += 1;
+            print!("> Batch {batch_no}/{num_batches}\r");
+            let _ = std::io::stdout().flush();
         }
 
         num += data.len();
