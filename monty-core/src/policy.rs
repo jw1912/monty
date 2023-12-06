@@ -1,11 +1,15 @@
 use crate::{Flag, Move, Position, FeatureList};
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    PolicyNetwork {
+        weights: [[PolicyVal::from_raw([0.0; 16]); NetworkDims::FEATURES]; NetworkDims::INDICES],
+        hce: [0.0; NetworkDims::HCE],
+    };
 
 pub struct NetworkDims;
 impl NetworkDims {
-    pub const INDICES: usize = 6 * 64;
+    pub const INDICES: usize = 6 + 64;
     pub const FEATURES: usize = 769;
     pub const NEURONS: usize = 16;
     pub const HCE: usize = 4;
@@ -15,7 +19,6 @@ impl NetworkDims {
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
     pub weights: [[PolicyVal; NetworkDims::FEATURES]; NetworkDims::INDICES],
-    pub outputs: PolicyVal,
     pub hce: [f32; NetworkDims::HCE],
 }
 
@@ -104,10 +107,10 @@ impl std::ops::SubAssign<PolicyVal> for PolicyVal {
 }
 
 impl PolicyVal {
-    pub fn out(&self, policy: &PolicyNetwork) -> f32 {
+    pub fn out(&self, other: &PolicyVal) -> f32 {
         let mut score = 0.0;
-        for (i, j) in self.inner.iter().zip(policy.outputs.inner.iter()) {
-            score += i.max(0.0) * j;
+        for (i, j) in self.inner.iter().zip(other.inner.iter()) {
+            score += i.max(0.0) * j.max(0.0);
         }
 
         score
@@ -150,8 +153,6 @@ impl std::ops::AddAssign<&PolicyNetwork> for PolicyNetwork {
             }
         }
 
-        self.outputs += rhs.outputs;
-
         for (i, j) in self.hce.iter_mut().zip(rhs.hce.iter()) {
             *i += *j;
         }
@@ -185,14 +186,19 @@ impl PolicyNetwork {
     }
 
     fn get_neuron(&self, idx: usize, feats: &FeatureList) -> f32 {
-        let wref = &self.weights[idx];
-        let mut score = PolicyVal::default();
-
+        let wref = &self.weights[6 + (idx % 64)];
+        let mut sq = PolicyVal::default();
         for &feat in feats.iter() {
-            score += wref[feat];
+            sq += wref[feat];
         }
 
-        score.out(self)
+        let wref = &self.weights[idx / 64];
+        let mut pc = PolicyVal::default();
+        for &feat in feats.iter() {
+            pc += wref[feat];
+        }
+
+        pc.out(&sq)
     }
 
     pub fn hce(&self, mov: &Move, pos: &Position) -> f32 {
