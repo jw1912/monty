@@ -181,20 +181,14 @@ impl PolicyNetwork {
         }
     }
 
-    fn get_neuron(&self, idx: usize, feats: &FeatureList) -> f32 {
+    fn get_neuron(&self, idx: usize, feats: &FeatureList, cached: &[PolicyVal; 6]) -> f32 {
         let wref = &self.weights[6 + (idx % 64)];
         let mut sq = PolicyVal::default();
         for &feat in feats.iter() {
             sq += wref[feat];
         }
 
-        let wref = &self.weights[idx / 64];
-        let mut pc = PolicyVal::default();
-        for &feat in feats.iter() {
-            pc += wref[feat];
-        }
-
-        pc.out(&sq)
+        cached[idx / 64].out(&sq)
     }
 
     pub fn hce(&self, mov: &Move, pos: &Position) -> f32 {
@@ -218,9 +212,9 @@ impl PolicyNetwork {
         score
     }
 
-    pub fn get(mov: &Move, pos: &Position, policy: &PolicyNetwork, feats: &FeatureList) -> f32 {
+    pub fn get(mov: &Move, pos: &Position, policy: &PolicyNetwork, feats: &FeatureList, cached: &[PolicyVal; 6]) -> f32 {
         let idx = mov.index(pos.flip_val());
-        let sq_policy = policy.get_neuron(idx, feats);
+        let sq_policy = policy.get_neuron(idx, feats, cached);
 
         let hce_policy = policy.hce(mov, pos);
 

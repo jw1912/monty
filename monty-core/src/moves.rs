@@ -1,4 +1,4 @@
-use crate::{consts::Flag, position::Position, FeatureList};
+use crate::{consts::Flag, position::Position, PolicyNetwork, PolicyVal, NetworkDims, Piece};
 
 #[macro_export]
 macro_rules! pop_lsb {
@@ -143,14 +143,24 @@ impl MoveList {
         self.list.swap(a, b);
     }
 
-    pub fn set_policies<T>(&mut self, pos: &Position, policy: &T, get_policy: fn(&Move, &Position, &T, &FeatureList) -> f32) {
+    pub fn set_policies(&mut self, pos: &Position, policy: &PolicyNetwork) {
         let mut total = 0.0;
         let mut max = -1000.0;
         let mut floats = [0.0; 256];
         let feats = pos.get_features();
 
+        let mut cached = [PolicyVal::from_raw([0.0; NetworkDims::NEURONS]); 6];
+        for pc in Piece::PAWN..=Piece::KING {
+            if pos.piece(pc) & pos.boys() > 0 {
+                let wref = &policy.weights[pc - 2];
+                for &feat in feats.iter() {
+                    cached[pc - 2] += wref[feat];
+                }
+            }
+        }
+
         for (i, mov) in self.list.iter_mut().enumerate() {
-            floats[i] = get_policy(mov, pos, policy, &feats);
+            floats[i] = PolicyNetwork::get(mov, pos, policy, &feats, &cached);
             if floats[i] > max {
                 max = floats[i];
             }
