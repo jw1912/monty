@@ -54,10 +54,10 @@ fn update_single_grad(
         let from = usize::from(mov.from() ^ flip);
         let to = 64 + usize::from(mov.to() ^ flip);
 
-        let from_hidden = policy.weights[from].out(&feats);
-        let to_hidden = policy.weights[to].out(&feats);
+        let (from_hidden, from_out) = policy.weights[from].out_with_layers(&feats);
+        let (to_hidden, to_out) = policy.weights[to].out_with_layers(&feats);
 
-        let net_out = from_hidden.dot(&to_hidden);
+        let net_out = from_out.dot(&to_out);
 
         let score = net_out + policy.hce(&mov, pos.board());
 
@@ -66,15 +66,15 @@ fn update_single_grad(
         }
 
         total_visits += visits;
-        policies.push((mov, visits, score, from_hidden, to_hidden));
+        policies.push((mov, visits, score, from_hidden, to_hidden, from_out, to_out));
     }
 
-    for (_, _, score, _, _) in policies.iter_mut() {
+    for (_, _, score, _, _, _, _) in policies.iter_mut() {
         *score = (*score - max).exp();
         total += *score;
     }
 
-    for (mov, visits, score, from_hidden, to_hidden) in policies {
+    for (mov, visits, score, from_hidden, to_hidden, from_out, to_out) in policies {
         let from = usize::from(mov.from() ^ flip);
         let to = 64 + usize::from(mov.to() ^ flip);
 
@@ -91,15 +91,18 @@ fn update_single_grad(
             &feats,
             factor,
             &mut grad.weights[from],
-            to_hidden,
+            to_out,
             from_hidden,
+            from_out,
         );
+
         policy.weights[to].backprop(
             &feats,
             factor,
             &mut grad.weights[to],
-            from_hidden,
+            from_out,
             to_hidden,
+            to_out,
         );
 
         if pos.board().see(&mov, -108) {

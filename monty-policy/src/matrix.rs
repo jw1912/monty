@@ -6,6 +6,14 @@ pub struct Matrix<const M: usize, const N: usize> {
     inner: [Vector<N>; M],
 }
 
+impl<const M: usize, const N: usize> std::ops::AddAssign<Matrix<M, N>> for Matrix<M, N> {
+    fn add_assign(&mut self, rhs: Matrix<M, N>) {
+        for (u, v) in self.inner.iter_mut().zip(rhs.inner.iter()) {
+            *u += *v;
+        }
+    }
+}
+
 impl<const M: usize, const N: usize> std::ops::Deref for Matrix<M, N> {
     type Target = [Vector<N>; M];
     fn deref(&self) -> &Self::Target {
