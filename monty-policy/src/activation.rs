@@ -1,9 +1,10 @@
-pub trait Activation {
+pub trait Activation: Copy {
     fn activate(x: f32) -> f32;
 
     fn derivative(x: f32) -> f32;
 }
 
+#[derive(Clone, Copy)]
 pub struct ReLU;
 impl Activation for ReLU {
     fn activate(x: f32) -> f32 {

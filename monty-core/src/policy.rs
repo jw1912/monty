@@ -1,6 +1,6 @@
 use crate::{Flag, Move, Position, FeatureList};
 
-use monty_policy::{Vector, ReLU};
+use monty_policy::{Vector, ReLU, SubNet};
 
 pub type PolicyVal = Vector<{ NetworkDims::NEURONS }>;
 
@@ -18,16 +18,14 @@ impl NetworkDims {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    pub weights: [[PolicyVal; NetworkDims::FEATURES]; NetworkDims::INDICES],
+    pub weights: [SubNet<ReLU, {NetworkDims::NEURONS}, {NetworkDims::FEATURES}>; NetworkDims::INDICES],
     pub hce: [f32; NetworkDims::HCE],
 }
 
 impl std::ops::AddAssign<&PolicyNetwork> for PolicyNetwork {
     fn add_assign(&mut self, rhs: &PolicyNetwork) {
         for (i, j) in self.weights.iter_mut().zip(rhs.weights.iter()) {
-            for (a, b) in i.iter_mut().zip(j.iter()) {
-                *a += *b;
-            }
+            *i += j;
         }
 
         for (i, j) in self.hce.iter_mut().zip(rhs.hce.iter()) {
@@ -63,19 +61,13 @@ impl PolicyNetwork {
     }
 
     fn get_neuron(&self, mov: &Move, feats: &FeatureList, flip: u8) -> f32 {
-        let wref = &self.weights[usize::from(mov.from() ^ flip)];
-        let mut from = PolicyVal::zeroed();
-        for &feat in feats.iter() {
-            from += wref[feat];
-        }
+        let from_subnet = &self.weights[usize::from(mov.from() ^ flip)];
+        let from_vec = from_subnet.out(feats);
 
-        let wref = &self.weights[64 + usize::from(mov.to() ^ flip)];
-        let mut to = PolicyVal::zeroed();
-        for &feat in feats.iter() {
-            to += wref[feat];
-        }
+        let to_subnet = &self.weights[64 + usize::from(mov.to() ^ flip)];
+        let to_vec = to_subnet.out(feats);
 
-        from.out::<ReLU>(&to)
+        from_vec.dot(&to_vec)
     }
 
     pub fn hce(&self, mov: &Move, pos: &Position) -> f32 {

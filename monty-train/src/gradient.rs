@@ -1,6 +1,6 @@
 use crate::TrainingPosition;
 
-use monty_core::{Flag, PolicyNetwork, PolicyVal};
+use monty_core::{Flag, PolicyNetwork};
 use monty_policy::ReLU;
 
 pub fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) -> f32 {
@@ -45,17 +45,14 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         let from = usize::from(mov.from() ^ flip);
         let to = 64 + usize::from(mov.to() ^ flip);
 
-        let mut from_hidden = PolicyVal::zeroed();
-        for &feat in feats.iter() {
-            from_hidden += policy.weights[from][feat];
-        }
+        let from_hidden = policy.weights[from].ft(&feats);
+        let to_hidden = policy.weights[to].ft(&feats);
 
-        let mut to_hidden = PolicyVal::zeroed();
-        for &feat in feats.iter() {
-            to_hidden += policy.weights[to][feat];
-        }
+        let net_out = from_hidden
+            .activate::<ReLU>()
+            .dot(&to_hidden.activate::<ReLU>());
 
-        let score = from_hidden.out::<ReLU>(&to_hidden) + policy.hce(&mov, pos.board());
+        let score = net_out + policy.hce(&mov, pos.board());
 
         if score > max {
             max = score;
@@ -83,15 +80,8 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         let factor = err * ratio * (1.0 - ratio);
 
-        let from_adj = factor * to_hidden.activate::<ReLU>() * from_hidden.derivative::<ReLU>();
-        for &feat in feats.iter() {
-            grad.weights[from][feat] += from_adj;
-        }
-
-        let to_adj = factor * from_hidden.activate::<ReLU>() * to_hidden.derivative::<ReLU>();
-        for &feat in feats.iter() {
-            grad.weights[to][feat] += to_adj;
-        }
+        policy.weights[from].backprop(&feats, factor, &mut grad.weights[from], to_hidden.activate::<ReLU>(), from_hidden);
+        policy.weights[to].backprop(&feats, factor, &mut grad.weights[to], from_hidden.activate::<ReLU>(), to_hidden);
 
         if pos.board().see(&mov, -108) {
             grad.hce[0] += factor;

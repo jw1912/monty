@@ -1,4 +1,5 @@
 use monty_core::{PolicyNetwork, NetworkDims, PolicyVal};
+use monty_policy::SubNet;
 use monty_train::{gradient_batch, TrainingPosition, to_slice_with_lifetime, Rand};
 
 use std::{fs::File, io::{BufReader, BufRead, Write}};
@@ -19,13 +20,7 @@ fn main() {
     let mut policy = PolicyNetwork::boxed_and_zeroed();
     let mut rng = Rand::with_seed();
     for i in 0..NetworkDims::INDICES {
-        for j in 0..NetworkDims::FEATURES {
-            let mut val = [0.0; NetworkDims::NEURONS];
-            for v in val.iter_mut() {
-                *v = rng.rand_f32(0.2);
-            }
-            policy.weights[i][j] = PolicyVal::from_raw(val);
-        }
+        policy.weights[i] = SubNet::from_fn(|_| PolicyVal::from_fn(|_| rng.rand_f32(0.2)));
     }
 
     println!("# [Info]");
@@ -105,17 +100,8 @@ fn update(
     momentum: &mut PolicyNetwork,
     velocity: &mut PolicyNetwork,
 ) {
-    for i in 0..NetworkDims::INDICES {
-        for j in 0..NetworkDims::FEATURES {
-            let g = adj * grad.weights[i][j];
-            let m = &mut momentum.weights[i][j];
-            let v = &mut velocity.weights[i][j];
-            let p = &mut policy.weights[i][j];
-
-            *m = B1 * *m + (1. - B1) * g;
-            *v = B2 * *v + (1. - B2) * g * g;
-            *p -= lr * *m / (v.sqrt() + 0.000_000_01);
-        }
+    for (i, subnet) in policy.weights.iter_mut().enumerate() {
+        subnet.adam(&grad.weights[i], &mut momentum.weights[i], &mut velocity.weights[i], adj, lr);
     }
 
     for i in 0..NetworkDims::HCE {
