@@ -1,11 +1,7 @@
 use crate::{Flag, Move, Position, FeatureList};
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
-    PolicyNetwork {
-        weights: [[PolicyVal::from_raw([0.0; 16]); NetworkDims::FEATURES]; NetworkDims::INDICES],
-        hce: [0.0; NetworkDims::HCE],
-    };
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 pub struct NetworkDims;
 impl NetworkDims {
