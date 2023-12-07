@@ -1,8 +1,11 @@
-use monty_core::{PolicyNetwork, NetworkDims, PolicyVal};
+use monty_core::{NetworkDims, PolicyNetwork, PolicyVal};
 use monty_policy::SubNet;
-use monty_train::{gradient_batch, TrainingPosition, to_slice_with_lifetime, Rand};
+use monty_train::{gradient_batch, to_slice_with_lifetime, Rand, TrainingPosition};
 
-use std::{fs::File, io::{BufReader, BufRead, Write}};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, Write},
+};
 
 const BATCH_SIZE: usize = 16_384;
 const EPOCHS: usize = 10;
@@ -35,7 +38,14 @@ fn main() {
 
     for iteration in 1..=EPOCHS {
         println!("# [Training Epoch {iteration}]");
-        train(threads, &mut policy, lr, &mut momentum, &mut velocity, data_path.as_str());
+        train(
+            threads,
+            &mut policy,
+            lr,
+            &mut momentum,
+            &mut velocity,
+            data_path.as_str(),
+        );
 
         if iteration % LR_DROP == 0 {
             lr *= 0.1;
@@ -101,7 +111,13 @@ fn update(
     velocity: &mut PolicyNetwork,
 ) {
     for (i, subnet) in policy.weights.iter_mut().enumerate() {
-        subnet.adam(&grad.weights[i], &mut momentum.weights[i], &mut velocity.weights[i], adj, lr);
+        subnet.adam(
+            &grad.weights[i],
+            &mut momentum.weights[i],
+            &mut velocity.weights[i],
+            adj,
+            lr,
+        );
     }
 
     for i in 0..NetworkDims::HCE {

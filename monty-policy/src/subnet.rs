@@ -9,7 +9,9 @@ pub struct SubNet<T: Activation, const N: usize, const FEATS: usize> {
     phantom: PhantomData<T>,
 }
 
-impl<T: Activation, const N: usize, const FEATS: usize> std::ops::AddAssign<&SubNet<T, N, FEATS>> for SubNet<T, N, FEATS> {
+impl<T: Activation, const N: usize, const FEATS: usize> std::ops::AddAssign<&SubNet<T, N, FEATS>>
+    for SubNet<T, N, FEATS>
+{
     fn add_assign(&mut self, rhs: &SubNet<T, N, FEATS>) {
         for (u, v) in self.ft.iter_mut().zip(rhs.ft.iter()) {
             *u += *v;
@@ -59,7 +61,14 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         }
     }
 
-    pub fn adam(&mut self, grad: &Self, momentum: &mut Self, velocity: &mut Self, adj: f32, lr: f32) {
+    pub fn adam(
+        &mut self,
+        grad: &Self,
+        momentum: &mut Self,
+        velocity: &mut Self,
+        adj: f32,
+        lr: f32,
+    ) {
         const B1: f32 = 0.9;
         const B2: f32 = 0.999;
 

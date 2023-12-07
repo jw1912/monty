@@ -3,7 +3,12 @@ use crate::TrainingPosition;
 use monty_core::{Flag, PolicyNetwork};
 use monty_policy::ReLU;
 
-pub fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) -> f32 {
+pub fn gradient_batch(
+    threads: usize,
+    policy: &PolicyNetwork,
+    grad: &mut PolicyNetwork,
+    batch: &[TrainingPosition],
+) -> f32 {
     let size = (batch.len() / threads).max(1);
     let mut errors = vec![0.0; threads];
 
@@ -29,7 +34,12 @@ pub fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyN
     errors.iter().sum::<f32>()
 }
 
-fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut PolicyNetwork, error: &mut f32) {
+fn update_single_grad(
+    pos: &TrainingPosition,
+    policy: &PolicyNetwork,
+    grad: &mut PolicyNetwork,
+    error: &mut f32,
+) {
     let feats = pos.board().get_features();
 
     let mut policies = Vec::with_capacity(pos.num_moves());
@@ -80,8 +90,20 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         let factor = err * ratio * (1.0 - ratio);
 
-        policy.weights[from].backprop(&feats, factor, &mut grad.weights[from], to_hidden.activate::<ReLU>(), from_hidden);
-        policy.weights[to].backprop(&feats, factor, &mut grad.weights[to], from_hidden.activate::<ReLU>(), to_hidden);
+        policy.weights[from].backprop(
+            &feats,
+            factor,
+            &mut grad.weights[from],
+            to_hidden.activate::<ReLU>(),
+            from_hidden,
+        );
+        policy.weights[to].backprop(
+            &feats,
+            factor,
+            &mut grad.weights[to],
+            from_hidden.activate::<ReLU>(),
+            to_hidden,
+        );
 
         if pos.board().see(&mov, -108) {
             grad.hce[0] += factor;

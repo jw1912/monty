@@ -1,6 +1,6 @@
-use crate::{Flag, Move, Position, FeatureList};
+use crate::{FeatureList, Flag, Move, Position};
 
-use monty_policy::{Vector, ReLU, SubNet};
+use monty_policy::{ReLU, SubNet, Vector};
 
 pub type PolicyVal = Vector<{ NetworkDims::NEURONS }>;
 
@@ -18,7 +18,8 @@ impl NetworkDims {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    pub weights: [SubNet<ReLU, {NetworkDims::NEURONS}, {NetworkDims::FEATURES}>; NetworkDims::INDICES],
+    pub weights:
+        [SubNet<ReLU, { NetworkDims::NEURONS }, { NetworkDims::FEATURES }>; NetworkDims::INDICES],
     pub hce: [f32; NetworkDims::HCE],
 }
 
