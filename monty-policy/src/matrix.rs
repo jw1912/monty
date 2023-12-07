@@ -1,8 +1,22 @@
 use crate::Vector;
 
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Matrix<const M: usize, const N: usize> {
     inner: [Vector<N>; M],
+}
+
+impl<const M: usize, const N: usize> std::ops::Deref for Matrix<M, N> {
+    type Target = [Vector<N>; M];
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<const M: usize, const N: usize> std::ops::DerefMut for Matrix<M, N> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
 }
 
 impl<const M: usize, const N: usize> std::ops::Mul<Vector<N>> for Matrix<M, N> {

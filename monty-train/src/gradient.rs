@@ -1,7 +1,6 @@
 use crate::TrainingPosition;
 
 use monty_core::{Flag, PolicyNetwork};
-use monty_policy::ReLU;
 
 pub fn gradient_batch(
     threads: usize,
@@ -55,12 +54,10 @@ fn update_single_grad(
         let from = usize::from(mov.from() ^ flip);
         let to = 64 + usize::from(mov.to() ^ flip);
 
-        let from_hidden = policy.weights[from].ft(&feats);
-        let to_hidden = policy.weights[to].ft(&feats);
+        let from_hidden = policy.weights[from].out(&feats);
+        let to_hidden = policy.weights[to].out(&feats);
 
-        let net_out = from_hidden
-            .activate::<ReLU>()
-            .dot(&to_hidden.activate::<ReLU>());
+        let net_out = from_hidden.dot(&to_hidden);
 
         let score = net_out + policy.hce(&mov, pos.board());
 
@@ -94,14 +91,14 @@ fn update_single_grad(
             &feats,
             factor,
             &mut grad.weights[from],
-            to_hidden.activate::<ReLU>(),
+            to_hidden,
             from_hidden,
         );
         policy.weights[to].backprop(
             &feats,
             factor,
             &mut grad.weights[to],
-            from_hidden.activate::<ReLU>(),
+            from_hidden,
             to_hidden,
         );
 

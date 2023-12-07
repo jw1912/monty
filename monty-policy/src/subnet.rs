@@ -37,7 +37,7 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         self.ft(feats).activate::<T>()
     }
 
-    pub fn ft(&self, feats: &[usize]) -> Vector<N> {
+    fn ft(&self, feats: &[usize]) -> Vector<N> {
         let mut res = Vector::<N>::zeroed();
 
         for &feat in feats {
