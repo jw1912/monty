@@ -1,11 +1,15 @@
 use crate::{Flag, Move, Position, FeatureList};
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    PolicyNetwork {
+        weights: [[PolicyVal::from_raw([0.0; 16]); NetworkDims::FEATURES]; NetworkDims::INDICES],
+        hce: [0.0; NetworkDims::HCE],
+    };
 
 pub struct NetworkDims;
 impl NetworkDims {
-    pub const INDICES: usize = 6 + 64;
+    pub const INDICES: usize = 2 * 64;
     pub const FEATURES: usize = 769;
     pub const NEURONS: usize = 16;
     pub const HCE: usize = 4;
@@ -181,14 +185,20 @@ impl PolicyNetwork {
         }
     }
 
-    fn get_neuron(&self, idx: usize, feats: &FeatureList, cached: &[PolicyVal; 6]) -> f32 {
-        let wref = &self.weights[6 + (idx % 64)];
-        let mut sq = PolicyVal::default();
+    fn get_neuron(&self, mov: &Move, feats: &FeatureList, flip: u8) -> f32 {
+        let wref = &self.weights[usize::from(mov.from() ^ flip)];
+        let mut from = PolicyVal::default();
         for &feat in feats.iter() {
-            sq += wref[feat];
+            from += wref[feat];
         }
 
-        cached[idx / 64].out(&sq)
+        let wref = &self.weights[64 + usize::from(mov.to() ^ flip)];
+        let mut to = PolicyVal::default();
+        for &feat in feats.iter() {
+            to += wref[feat];
+        }
+
+        from.out(&to)
     }
 
     pub fn hce(&self, mov: &Move, pos: &Position) -> f32 {
@@ -212,9 +222,8 @@ impl PolicyNetwork {
         score
     }
 
-    pub fn get(mov: &Move, pos: &Position, policy: &PolicyNetwork, feats: &FeatureList, cached: &[PolicyVal; 6]) -> f32 {
-        let idx = mov.index(pos.flip_val());
-        let sq_policy = policy.get_neuron(idx, feats, cached);
+    pub fn get(mov: &Move, pos: &Position, policy: &PolicyNetwork, feats: &FeatureList) -> f32 {
+        let sq_policy = policy.get_neuron(mov, feats, pos.flip_val());
 
         let hce_policy = policy.hce(mov, pos);
 
