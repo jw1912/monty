@@ -1,4 +1,6 @@
-use crate::{Flag, Move, Position, FeatureList};
+use crate::{Flag, Move, Position, FeatureList, Vector, ReLU};
+
+pub type PolicyVal = Vector<{ NetworkDims::NEURONS }>;
 
 pub static POLICY_NETWORK: PolicyNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
@@ -16,129 +18,6 @@ impl NetworkDims {
 pub struct PolicyNetwork {
     pub weights: [[PolicyVal; NetworkDims::FEATURES]; NetworkDims::INDICES],
     pub hce: [f32; NetworkDims::HCE],
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-pub struct PolicyVal {
-    inner: [f32; NetworkDims::NEURONS],
-}
-
-impl std::ops::Index<usize> for PolicyVal {
-    type Output = f32;
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.inner[index]
-    }
-}
-
-impl std::ops::Add<PolicyVal> for PolicyVal {
-    type Output = PolicyVal;
-    fn add(mut self, rhs: PolicyVal) -> Self::Output {
-        for (i, j) in self.inner.iter_mut().zip(rhs.inner.iter()) {
-            *i += *j;
-        }
-
-        self
-    }
-}
-
-impl std::ops::Add<f32> for PolicyVal {
-    type Output = PolicyVal;
-    fn add(mut self, rhs: f32) -> Self::Output {
-        for i in self.inner.iter_mut() {
-            *i += rhs;
-        }
-
-        self
-    }
-}
-
-impl std::ops::AddAssign<PolicyVal> for PolicyVal {
-    fn add_assign(&mut self, rhs: PolicyVal) {
-        for (i, j) in self.inner.iter_mut().zip(rhs.inner.iter()) {
-            *i += *j;
-        }
-    }
-}
-
-impl std::ops::Div<PolicyVal> for PolicyVal {
-    type Output = PolicyVal;
-    fn div(mut self, rhs: PolicyVal) -> Self::Output {
-        for (i, j) in self.inner.iter_mut().zip(rhs.inner.iter()) {
-            *i /= *j;
-        }
-
-        self
-    }
-}
-
-impl std::ops::Mul<PolicyVal> for PolicyVal {
-    type Output = PolicyVal;
-    fn mul(mut self, rhs: PolicyVal) -> Self::Output {
-        for (i, j) in self.inner.iter_mut().zip(rhs.inner.iter()) {
-            *i *= *j;
-        }
-
-        self
-    }
-}
-
-impl std::ops::Mul<PolicyVal> for f32 {
-    type Output = PolicyVal;
-    fn mul(self, mut rhs: PolicyVal) -> Self::Output {
-        for i in rhs.inner.iter_mut() {
-            *i *= self;
-        }
-
-        rhs
-    }
-}
-
-impl std::ops::SubAssign<PolicyVal> for PolicyVal {
-    fn sub_assign(&mut self, rhs: PolicyVal) {
-        for (i, j) in self.inner.iter_mut().zip(rhs.inner.iter()) {
-            *i -= *j;
-        }
-    }
-}
-
-impl PolicyVal {
-    pub fn out(&self, other: &PolicyVal) -> f32 {
-        let mut score = 0.0;
-        for (i, j) in self.inner.iter().zip(other.inner.iter()) {
-            score += i.max(0.0) * j.max(0.0);
-        }
-
-        score
-    }
-
-    pub fn sqrt(mut self) -> Self {
-        for i in self.inner.iter_mut() {
-            *i = i.sqrt();
-        }
-
-        self
-    }
-
-    pub const fn from_raw(inner: [f32; NetworkDims::NEURONS]) -> Self {
-        Self { inner }
-    }
-
-    pub fn activate(mut self) -> Self {
-        for i in self.inner.iter_mut() {
-            *i = i.max(0.0);
-        }
-
-        self
-    }
-
-    pub fn derivative(mut self) -> Self {
-        for i in self.inner.iter_mut() {
-            *i = if *i > 0.0 {1.0} else {0.0};
-        }
-
-        self
-    }
 }
 
 impl std::ops::AddAssign<&PolicyNetwork> for PolicyNetwork {
@@ -194,7 +73,7 @@ impl PolicyNetwork {
             to += wref[feat];
         }
 
-        from.out(&to)
+        from.out::<ReLU>(&to)
     }
 
     pub fn hce(&self, mov: &Move, pos: &Position) -> f32 {

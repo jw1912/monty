@@ -1,6 +1,6 @@
 use crate::TrainingPosition;
 
-use monty_core::{Flag, PolicyNetwork, PolicyVal};
+use monty_core::{Flag, PolicyNetwork, PolicyVal, ReLU};
 
 pub fn gradient_batch(threads: usize, policy: &PolicyNetwork, grad: &mut PolicyNetwork, batch: &[TrainingPosition]) -> f32 {
     let size = (batch.len() / threads).max(1);
@@ -54,7 +54,7 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
             to_hidden += policy.weights[to][feat];
         }
 
-        let score = from_hidden.out(&to_hidden) + policy.hce(&mov, pos.board());
+        let score = from_hidden.out::<ReLU>(&to_hidden) + policy.hce(&mov, pos.board());
 
         if score > max {
             max = score;
@@ -82,12 +82,12 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         let factor = err * ratio * (1.0 - ratio);
 
-        let from_adj = factor * to_hidden.activate() * from_hidden.derivative();
+        let from_adj = factor * to_hidden.activate::<ReLU>() * from_hidden.derivative::<ReLU>();
         for &feat in feats.iter() {
             grad.weights[from][feat] += from_adj;
         }
 
-        let to_adj = factor * from_hidden.activate() * to_hidden.derivative();
+        let to_adj = factor * from_hidden.activate::<ReLU>() * to_hidden.derivative::<ReLU>();
         for &feat in feats.iter() {
             grad.weights[to][feat] += to_adj;
         }
