@@ -41,28 +41,27 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
     for training_mov in pos.moves() {
         let mov = training_mov.mov(pos.board());
         let visits = training_mov.visits();
-        let idx = mov.index(flip);
-        let sq = 6 + (idx % 64);
-        let pc = idx / 64;
+        let from = usize::from(mov.from() ^ flip);
+        let to = 64 + usize::from(mov.to() ^ flip);
 
-        let mut sq_hidden = PolicyVal::default();
+        let mut from_hidden = PolicyVal::default();
         for &feat in feats.iter() {
-            sq_hidden += policy.weights[sq][feat];
+            from_hidden += policy.weights[from][feat];
         }
 
-        let mut pc_hidden = PolicyVal::default();
+        let mut to_hidden = PolicyVal::default();
         for &feat in feats.iter() {
-            pc_hidden += policy.weights[pc][feat];
+            to_hidden += policy.weights[to][feat];
         }
 
-        let score = pc_hidden.out(&sq_hidden) + policy.hce(&mov, pos.board());
+        let score = from_hidden.out(&to_hidden) + policy.hce(&mov, pos.board());
 
         if score > max {
             max = score;
         }
 
         total_visits += visits;
-        policies.push((mov, visits, score, pc_hidden, sq_hidden));
+        policies.push((mov, visits, score, from_hidden, to_hidden));
     }
 
     for (_, _, score, _, _) in policies.iter_mut() {
@@ -70,10 +69,9 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
         total += *score;
     }
 
-    for (mov, visits, score, pc_hidden, sq_hidden) in policies {
-        let idx = mov.index(flip);
-        let sq = 6 + (idx % 64);
-        let pc = idx / 64;
+    for (mov, visits, score, from_hidden, to_hidden) in policies {
+        let from = usize::from(mov.from() ^ flip);
+        let to = 64 + usize::from(mov.to() ^ flip);
 
         let ratio = score / total;
 
@@ -84,14 +82,14 @@ fn update_single_grad(pos: &TrainingPosition, policy: &PolicyNetwork, grad: &mut
 
         let factor = err * ratio * (1.0 - ratio);
 
-        let pc_adj = factor * sq_hidden.activate() * pc_hidden.derivative();
+        let from_adj = factor * to_hidden.activate() * from_hidden.derivative();
         for &feat in feats.iter() {
-            grad.weights[pc][feat] += pc_adj;
+            grad.weights[from][feat] += from_adj;
         }
 
-        let sq_adj = factor * pc_hidden.activate() * sq_hidden.derivative();
+        let to_adj = factor * from_hidden.activate() * to_hidden.derivative();
         for &feat in feats.iter() {
-            grad.weights[sq][feat] += sq_adj;
+            grad.weights[to][feat] += to_adj;
         }
 
         if pos.board().see(&mov, -108) {
