@@ -1,4 +1,6 @@
-use crate::{Flag, Move, Position, FeatureList, Vector, ReLU};
+use crate::{Flag, Move, Position, FeatureList};
+
+use monty_policy::{Vector, ReLU};
 
 pub type PolicyVal = Vector<{ NetworkDims::NEURONS }>;
 
@@ -62,13 +64,13 @@ impl PolicyNetwork {
 
     fn get_neuron(&self, mov: &Move, feats: &FeatureList, flip: u8) -> f32 {
         let wref = &self.weights[usize::from(mov.from() ^ flip)];
-        let mut from = PolicyVal::default();
+        let mut from = PolicyVal::zeroed();
         for &feat in feats.iter() {
             from += wref[feat];
         }
 
         let wref = &self.weights[64 + usize::from(mov.to() ^ flip)];
-        let mut to = PolicyVal::default();
+        let mut to = PolicyVal::zeroed();
         for &feat in feats.iter() {
             to += wref[feat];
         }
