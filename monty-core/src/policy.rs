@@ -3,7 +3,11 @@ use crate::{FeatureList, Flag, Move, Position};
 use monty_policy::SubNet;
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+    PolicyNetwork {
+        weights: [SubNet::zeroed(); 128],
+        hce: [0.0; 4],
+    };
 
 #[repr(C)]
 #[derive(Clone, Copy)]
