@@ -5,8 +5,8 @@ use crate::{activation::Activation, Vector, Layer, Matrix};
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct SubNet<T: Activation, const N: usize, const FEATS: usize> {
-    ft: [Vector<8>; FEATS],
-    l2: Layer<T, 8, N>,
+    ft: [Vector<N>; FEATS],
+    l2: Layer<T, N, N>,
     phantom: PhantomData<T>,
 }
 
@@ -56,13 +56,13 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         self.l2.out(self.ft(feats))
     }
 
-    pub fn out_with_layers(&self, feats: &[usize]) -> (Vector<8>, Vector<N>) {
+    pub fn out_with_layers(&self, feats: &[usize]) -> (Vector<N>, Vector<N>) {
         let ft = self.ft(feats);
         let l2 = self.l2.out(ft);
         (ft, l2)
     }
 
-    fn ft(&self, feats: &[usize]) -> Vector<8> {
+    fn ft(&self, feats: &[usize]) -> Vector<N> {
         let mut res = Vector::zeroed();
 
         for &feat in feats {
@@ -78,7 +78,7 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         factor: f32,
         grad: &mut Self,
         other: Vector<N>,
-        ft: Vector<8>,
+        ft: Vector<N>,
         l2: Vector<N>,
     ) {
         let mut cumulated = factor * other;
