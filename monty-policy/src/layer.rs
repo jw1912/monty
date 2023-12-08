@@ -33,17 +33,14 @@ impl<T: Activation, const M: usize, const N: usize> Layer<T, M, N> {
     pub fn backprop(
         &self,
         grad: &mut Self,
-        cumulated: &mut Vector<N>,
+        cumulated: Vector<N>,
         inp: Vector<M>,
-        out: Vector<N>,
     ) {
-        *cumulated = *cumulated * out.derivative::<T>();
-
         for (i, row) in grad.weights.iter_mut().enumerate() {
             *row += cumulated[i] * inp;
         }
 
-        grad.bias += *cumulated;
+        grad.bias += cumulated;
     }
 
     pub fn adam(

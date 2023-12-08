@@ -81,11 +81,10 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         ft: Vector<N>,
         l2: Vector<N>,
     ) {
-        let mut cumulated = factor * other;
-        self.l2.backprop(&mut grad.l2, &mut cumulated, ft, l2);
+        let cumulated = factor * other * l2.derivative::<T>();
+        self.l2.backprop(&mut grad.l2, cumulated, ft);
 
-        let mut cumulated = grad.l2.transpose_mul(cumulated);
-        cumulated = cumulated * ft.derivative::<T>();
+        let cumulated = self.l2.transpose_mul(cumulated) * ft.derivative::<T>();
         for &feat in feats.iter() {
             grad.ft[feat] += cumulated;
         }
