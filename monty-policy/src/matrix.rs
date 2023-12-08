@@ -35,6 +35,10 @@ impl<const M: usize, const N: usize> std::ops::Mul<Vector<N>> for Matrix<M, N> {
 }
 
 impl<const M: usize, const N: usize> Matrix<M, N> {
+    pub const fn zeroed() -> Self {
+        Self::from_raw([Vector::zeroed(); M])
+    }
+
     pub const fn from_raw(inner: [Vector<N>; M]) -> Self {
         Self { inner }
     }
@@ -47,5 +51,17 @@ impl<const M: usize, const N: usize> Matrix<M, N> {
             }
             v
         })
+    }
+
+    pub fn adam(&mut self, g: &Self, m: &mut Self, v: &mut Self, adj: f32, lr: f32) {
+        for i in 0..N {
+            self.inner[i].adam(
+                g.inner[i],
+                &mut m.inner[i],
+                &mut v.inner[i],
+                adj,
+                lr,
+            );
+        }
     }
 }

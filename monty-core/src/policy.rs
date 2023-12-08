@@ -1,6 +1,6 @@
 use crate::{FeatureList, Flag, Move, Position};
 
-use monty_policy::{ReLU, SubNet};
+use monty_policy::SubNet;
 
 pub static POLICY_NETWORK: PolicyNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
@@ -8,7 +8,7 @@ pub static POLICY_NETWORK: PolicyNetwork =
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
-    pub weights: [SubNet<ReLU, 16, 769>; 128],
+    pub weights: [SubNet; 128],
     pub hce: [f32; 4],
 }
 

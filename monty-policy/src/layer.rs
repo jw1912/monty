@@ -55,27 +55,68 @@ impl<T: Activation, const M: usize, const N: usize> Layer<T, M, N> {
         adj: f32,
         lr: f32,
     ) {
-        const B1: f32 = 0.9;
-        const B2: f32 = 0.999;
+        self.weights.adam(&grad.weights, &mut momentum.weights, &mut velocity.weights, adj, lr);
 
-        for i in 0..N {
-            let g = adj * grad.weights[i];
-            let m = &mut momentum.weights[i];
-            let v = &mut velocity.weights[i];
-            let p = &mut self.weights[i];
+        self.bias.adam(grad.bias, &mut momentum.bias, &mut velocity.bias, adj, lr);
+    }
+}
 
-            *m = B1 * *m + (1. - B1) * g;
-            *v = B2 * *v + (1. - B2) * g * g;
-            *p -= lr * *m / (v.sqrt() + 0.000_000_01);
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SparseLayer<T: Activation, const M: usize, const N: usize> {
+    weights: Matrix<M, N>,
+    bias: Vector<N>,
+    phantom: PhantomData<T>,
+}
+
+impl<T: Activation, const M: usize, const N: usize> std::ops::AddAssign<SparseLayer<T, M, N>> for SparseLayer<T, M, N> {
+    fn add_assign(&mut self, rhs: SparseLayer<T, M, N>) {
+        self.weights += rhs.weights;
+        self.bias += rhs.bias;
+    }
+}
+
+impl<T: Activation, const M: usize, const N: usize> SparseLayer<T, M, N> {
+    pub const fn from_raw(weights: Matrix<M, N>, bias: Vector<N>) -> Self {
+        Self { weights, bias, phantom: PhantomData }
+    }
+
+    pub fn out(&self, feats: &[usize]) -> Vector<N> {
+        let mut res = self.bias;
+
+        for &feat in feats {
+            res += self.weights[feat];
         }
 
-        let g = adj * grad.bias;
-        let m = &mut momentum.bias;
-        let v = &mut velocity.bias;
-        let p = &mut self.bias;
+        res.activate::<T>()
+    }
 
-        *m = B1 * *m + (1. - B1) * g;
-        *v = B2 * *v + (1. - B2) * g * g;
-        *p -= lr * *m / (v.sqrt() + 0.000_000_01);
+    pub fn backprop(
+        &self,
+        grad: &mut Self,
+        mut cumulated: Vector<N>,
+        feats: &[usize],
+        ft: Vector<N>,
+    ) {
+        cumulated = cumulated * ft.derivative::<T>();
+
+        for &feat in feats.iter() {
+            grad.weights[feat] += cumulated;
+        }
+
+        grad.bias += cumulated;
+    }
+
+    pub fn adam(
+        &mut self,
+        grad: &Self,
+        momentum: &mut Self,
+        velocity: &mut Self,
+        adj: f32,
+        lr: f32,
+    ) {
+        self.weights.adam(&grad.weights, &mut momentum.weights, &mut velocity.weights, adj, lr);
+
+        self.bias.adam(grad.bias, &mut momentum.bias, &mut velocity.bias, adj, lr);
     }
 }
