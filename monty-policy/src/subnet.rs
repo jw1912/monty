@@ -85,6 +85,7 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
 
         self.l2.backprop(&mut grad.l2, &mut other, ft, l2);
 
+        let mut other = grad.l2.transpose_mul(other);
         other = other * ft.derivative::<T>();
         for &feat in feats.iter() {
             grad.ft[feat] += other;

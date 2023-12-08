@@ -26,6 +26,10 @@ impl<T: Activation, const M: usize, const N: usize> Layer<T, M, N> {
         (self.weights * inp + self.bias).activate::<T>()
     }
 
+    pub fn transpose_mul(&self, out: Vector<N>) -> Vector<M> {
+        self.weights.transpose_mul(out)
+    }
+
     pub fn backprop(
         &self,
         grad: &mut Self,
@@ -34,9 +38,12 @@ impl<T: Activation, const M: usize, const N: usize> Layer<T, M, N> {
         out: Vector<N>,
     ) {
         *cumulated = *cumulated * out.derivative::<T>();
+
         for (i, row) in grad.weights.iter_mut().enumerate() {
             *row += cumulated[i] * inp;
         }
+
+        grad.bias += *cumulated;
     }
 
     pub fn adam(
