@@ -7,7 +7,7 @@ mod value;
 
 pub use consts::{Flag, Piece, Side};
 pub use moves::{Move, MoveList};
-pub use policy::{NetworkDims, PolicyNetwork, POLICY_NETWORK};
+pub use policy::{PolicyNetwork, POLICY_NETWORK};
 pub use position::{perft, FeatureList, GameState, Position};
 pub use value::Accumulator;
 
