@@ -1,4 +1,4 @@
-use monty_core::{NetworkDims, PolicyNetwork, PolicyVal};
+use monty_core::{NetworkDims, PolicyNetwork};
 use monty_policy::SubNet;
 use monty_train::{gradient_batch, to_slice_with_lifetime, Rand, TrainingPosition};
 
@@ -23,7 +23,7 @@ fn main() {
     let mut policy = PolicyNetwork::boxed_and_zeroed();
     let mut rng = Rand::with_seed();
     for i in 0..NetworkDims::INDICES {
-        policy.weights[i] = SubNet::from_fn(|| PolicyVal::from_fn(|_| rng.rand_f32(0.2)));
+        policy.weights[i] = SubNet::from_fn(|| rng.rand_f32(0.2));
     }
 
     println!("# [Info]");

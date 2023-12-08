@@ -5,8 +5,8 @@ use crate::{activation::Activation, Vector, Layer, Matrix};
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct SubNet<T: Activation, const N: usize, const FEATS: usize> {
-    ft: [Vector<N>; FEATS],
-    l2: Layer<T, N, N>,
+    ft: [Vector<8>; FEATS],
+    l2: Layer<T, 8, N>,
     phantom: PhantomData<T>,
 }
 
@@ -31,22 +31,22 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         }
     }
 
-    pub fn from_fn<F: FnMut() -> Vector<N>>(mut f: F) -> Self {
+    pub fn from_fn<F: FnMut() -> f32>(mut f: F) -> Self {
 
         let mut v = [Vector::zeroed(); N];
         for r in v.iter_mut() {
-            *r = f();
+            *r = Vector::from_fn(|_| f());
         }
         let m = Matrix::from_raw(v);
 
         let mut res = Self {
             ft: [Vector::zeroed(); FEATS],
-            l2: Layer::from_raw(m, f()),
+            l2: Layer::from_raw(m, Vector::from_fn(|_| f())),
             phantom: PhantomData,
         };
 
         for v in res.ft.iter_mut() {
-            *v = f();
+            *v = Vector::from_fn(|_| f());
         }
 
         res
@@ -56,14 +56,14 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         self.l2.out(self.ft(feats))
     }
 
-    pub fn out_with_layers(&self, feats: &[usize]) -> (Vector<N>, Vector<N>) {
+    pub fn out_with_layers(&self, feats: &[usize]) -> (Vector<8>, Vector<N>) {
         let ft = self.ft(feats);
         let l2 = self.l2.out(ft);
         (ft, l2)
     }
 
-    fn ft(&self, feats: &[usize]) -> Vector<N> {
-        let mut res = Vector::<N>::zeroed();
+    fn ft(&self, feats: &[usize]) -> Vector<8> {
+        let mut res = Vector::zeroed();
 
         for &feat in feats {
             res += self.ft[feat];
@@ -78,7 +78,7 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         factor: f32,
         grad: &mut Self,
         mut other: Vector<N>,
-        ft: Vector<N>,
+        ft: Vector<8>,
         l2: Vector<N>,
     ) {
         other = factor * other;
