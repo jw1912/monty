@@ -23,35 +23,6 @@ impl<T: Activation, const N: usize, const FEATS: usize> std::ops::AddAssign<&Sub
 }
 
 impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
-    pub const fn zeroed() -> Self {
-        Self {
-            ft: [Vector::zeroed(); FEATS],
-            l2: Layer::from_raw(Matrix::from_raw([Vector::zeroed(); N]), Vector::zeroed()),
-            phantom: PhantomData,
-        }
-    }
-
-    pub fn from_fn<F: FnMut() -> f32>(mut f: F) -> Self {
-
-        let mut v = [Vector::zeroed(); N];
-        for r in v.iter_mut() {
-            *r = Vector::from_fn(|_| f());
-        }
-        let m = Matrix::from_raw(v);
-
-        let mut res = Self {
-            ft: [Vector::zeroed(); FEATS],
-            l2: Layer::from_raw(m, Vector::from_fn(|_| f())),
-            phantom: PhantomData,
-        };
-
-        for v in res.ft.iter_mut() {
-            *v = Vector::from_fn(|_| f());
-        }
-
-        res
-    }
-
     pub fn out(&self, feats: &[usize]) -> Vector<N> {
         self.l2.out(self.ft(feats))
     }
@@ -60,16 +31,6 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         let ft = self.ft(feats);
         let l2 = self.l2.out(ft);
         (ft, l2)
-    }
-
-    fn ft(&self, feats: &[usize]) -> Vector<N> {
-        let mut res = Vector::zeroed();
-
-        for &feat in feats {
-            res += self.ft[feat];
-        }
-
-        res.activate::<T>()
     }
 
     pub fn backprop(
@@ -88,6 +49,16 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         for &feat in feats.iter() {
             grad.ft[feat] += cumulated;
         }
+    }
+
+    fn ft(&self, feats: &[usize]) -> Vector<N> {
+        let mut res = Vector::zeroed();
+
+        for &feat in feats {
+            res += self.ft[feat];
+        }
+
+        res.activate::<T>()
     }
 
     pub fn adam(
@@ -113,5 +84,33 @@ impl<T: Activation, const N: usize, const FEATS: usize> SubNet<T, N, FEATS> {
         }
 
         self.l2.adam(&grad.l2, &mut momentum.l2, &mut velocity.l2, adj, lr);
+    }
+
+    pub const fn zeroed() -> Self {
+        Self {
+            ft: [Vector::zeroed(); FEATS],
+            l2: Layer::from_raw(Matrix::from_raw([Vector::zeroed(); N]), Vector::zeroed()),
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn from_fn<F: FnMut() -> f32>(mut f: F) -> Self {
+        let mut v = [Vector::zeroed(); N];
+        for r in v.iter_mut() {
+            *r = Vector::from_fn(|_| f());
+        }
+        let m = Matrix::from_raw(v);
+
+        let mut res = Self {
+            ft: [Vector::zeroed(); FEATS],
+            l2: Layer::from_raw(m, Vector::from_fn(|_| f())),
+            phantom: PhantomData,
+        };
+
+        for v in res.ft.iter_mut() {
+            *v = Vector::from_fn(|_| f());
+        }
+
+        res
     }
 }
