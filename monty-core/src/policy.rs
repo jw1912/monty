@@ -3,7 +3,7 @@ use crate::{FeatureList, Flag, Move, Position};
 use monty_policy::{ReLU, SubNet};
 
 pub static POLICY_NETWORK: PolicyNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy-2.bin")) };
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 pub struct NetworkDims;
 impl NetworkDims {
