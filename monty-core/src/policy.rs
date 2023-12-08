@@ -1,8 +1,6 @@
 use crate::{FeatureList, Flag, Move, Position};
 
-use monty_policy::{ReLU, SubNet, Vector};
-
-pub type PolicyVal = Vector<{ NetworkDims::NEURONS }>;
+use monty_policy::{ReLU, SubNet};
 
 pub static POLICY_NETWORK: PolicyNetwork =
     //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
