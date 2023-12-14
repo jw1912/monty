@@ -300,18 +300,20 @@ impl<'a> Searcher<'a> {
     ) -> (Move, f32) {
         let timer = Instant::now();
 
-        if let Some((prev_prev, prev)) = prevs {
-            let prev_prev_ptr = self.find_mov_ptr(0, &prev_prev);
-            let prev_ptr = self.find_mov_ptr(prev_prev_ptr, &prev);
-            if prev_ptr == -1 {
-                self.tree.clear();
+        if !self.tree.is_empty() {
+            if let Some((prev_prev, prev)) = prevs {
+                let prev_prev_ptr = self.find_mov_ptr(0, &prev_prev);
+                let prev_ptr = self.find_mov_ptr(prev_prev_ptr, &prev);
+                if prev_ptr == -1 {
+                    self.tree.clear();
+                } else {
+                    let mut subtree = Vec::new();
+                    self.construct_subtree(prev_ptr, &mut subtree);
+                    self.tree = subtree;
+                }
             } else {
-                let mut subtree = Vec::new();
-                self.construct_subtree(prev_ptr, &mut subtree);
-                self.tree = subtree;
+                self.tree.clear();
             }
-        } else {
-            self.tree.clear();
         }
 
         let mut root_node = Node::new(&self.startpos, &[]);
