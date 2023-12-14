@@ -9,6 +9,7 @@ fn main() {
     let mut pos = Position::parse_fen(STARTPOS);
     let mut params = TunableParams::default();
     let mut stack = Vec::new();
+    let mut tree = Vec::new();
     let mut report_moves = false;
     let policy = Box::new(POLICY_NETWORK);
 
@@ -38,8 +39,9 @@ fn main() {
             "isready" => uci::isready(),
             "setoption" => uci::setoption(&commands, &mut params, &mut report_moves),
             "position" => uci::position(commands, &mut pos, &mut stack, &mut prevs),
-            "go" => uci::go(
+            "go" => tree = uci::go(
                 &commands,
+                tree,
                 stack.clone(),
                 &pos,
                 &params,

@@ -71,6 +71,26 @@ impl<'a> Searcher<'a> {
         }
     }
 
+    pub fn set(
+        &mut self,
+        pos: Position,
+        stack: Vec<u64>,
+        node_limit: usize,
+        params: TunableParams,
+        policy: &'a PolicyNetwork,
+        tree: Vec<Node>,
+    ) {
+        self.startpos = pos;
+        self.startstack = stack.clone();
+        self.pos = pos;
+        self.tree = tree;
+        self.stack = stack.clone();
+        self.node_limit = node_limit;
+        self.selection = Vec::new();
+        self.params = params;
+        self.policy = policy;
+    }
+
     fn make_move(&mut self, mov: Move) {
         self.stack.push(self.pos.hash());
         self.pos.make(mov, None);
@@ -132,6 +152,10 @@ impl<'a> Searcher<'a> {
 
             if node.is_terminal() {
                 break;
+            }
+
+            if node.moves.is_empty() {
+                println!("visits {} ptr {}", node.visits, node_ptr);
             }
 
             let mov_idx = self.pick_child(node);
@@ -268,8 +292,10 @@ impl<'a> Searcher<'a> {
             let new_ptr = mov.ptr();
             let curr_len = subtree.len();
 
-            subtree[idx].moves[i].set_ptr(curr_len as i32);
-            self.construct_subtree(new_ptr, subtree);
+            if new_ptr != -1 {
+                subtree[idx].moves[i].set_ptr(curr_len as i32);
+                self.construct_subtree(new_ptr, subtree);
+            }
         }
     }
 
@@ -300,17 +326,17 @@ impl<'a> Searcher<'a> {
     ) -> (Move, f32) {
         let timer = Instant::now();
 
+        // attempt to reuse the previous tree
         if !self.tree.is_empty() {
             if let Some((prev_prev, prev)) = prevs {
                 let prev_prev_ptr = self.find_mov_ptr(0, &prev_prev);
                 let prev_ptr = self.find_mov_ptr(prev_prev_ptr, &prev);
-                if prev_ptr == -1 {
+                if prev_ptr == -1 || self.tree[prev_ptr as usize].visits == 1 {
                     self.tree.clear();
                 } else {
                     let mut subtree = Vec::new();
                     self.construct_subtree(prev_ptr, &mut subtree);
                     self.tree = subtree;
-                    println!("info string did not clear subtree");
                 }
             } else {
                 self.tree.clear();

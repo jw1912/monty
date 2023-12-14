@@ -1,4 +1,4 @@
-use crate::{mcts::Searcher, params::TunableParams};
+use crate::{mcts::{Searcher, Node}, params::TunableParams};
 
 use monty_core::{cp_wdl, perft, PolicyNetwork, Position, STARTPOS, Move};
 
@@ -77,15 +77,17 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, p
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn go(
     commands: &[&str],
+    tree: Vec<Node>,
     stack: Vec<u64>,
     pos: &Position,
     params: &TunableParams,
     report_moves: bool,
     policy: &PolicyNetwork,
     prevs: &mut Option<(Move, Move)>,
-) {
+) -> Vec<Node> {
     let mut nodes = 10_000_000;
     let mut max_time = None;
     let mut max_depth = 256;
@@ -107,12 +109,15 @@ pub fn go(
     }
 
     let mut searcher = Searcher::new(*pos, stack, nodes, params.clone(), policy);
+    searcher.tree = tree;
 
     let (mov, _) = searcher.search(max_time, max_depth, report_moves, true, &mut 0, *prevs);
 
     *prevs = Some((mov, Move::NULL));
 
     println!("bestmove {}", mov.to_uci());
+
+    searcher.tree
 }
 
 pub fn eval(pos: &Position, policy: &PolicyNetwork) {
