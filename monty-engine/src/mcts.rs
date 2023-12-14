@@ -10,7 +10,6 @@ pub struct Node {
     wins: f32,
     left: usize,
     state: GameState,
-    hash: u64,
     pub moves: MoveList,
 }
 
@@ -20,7 +19,6 @@ impl Node {
         let state = pos.game_state(&moves, stack);
         Self {
             state,
-            hash: pos.hash(),
             ..Default::default()
         }
     }
@@ -302,22 +300,18 @@ impl<'a> Searcher<'a> {
     ) -> (Move, f32) {
         let timer = Instant::now();
 
-        if !self.tree.is_empty() {
-            if self.startpos.hash() != self.tree[0].hash {
+        if let Some((prev_prev, prev)) = prevs {
+            let prev_prev_ptr = self.find_mov_ptr(0, &prev_prev);
+            let prev_ptr = self.find_mov_ptr(prev_prev_ptr, &prev);
+            if prev_ptr == -1 {
                 self.tree.clear();
-            } else if let Some((prev_prev, prev)) = prevs {
-                let prev_prev_ptr = self.find_mov_ptr(0, &prev_prev);
-                let prev_ptr = self.find_mov_ptr(prev_prev_ptr, &prev);
-                if prev_ptr == -1 {
-                    self.tree.clear();
-                } else {
-                    let mut subtree = Vec::new();
-                    self.construct_subtree(prev_ptr, &mut subtree);
-                    self.tree = subtree;
-                }
             } else {
-                self.tree.clear();
+                let mut subtree = Vec::new();
+                self.construct_subtree(prev_ptr, &mut subtree);
+                self.tree = subtree;
             }
+        } else {
+            self.tree.clear();
         }
 
         let mut root_node = Node::new(&self.startpos, &[]);
