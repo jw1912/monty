@@ -12,6 +12,8 @@ fn main() {
     let mut report_moves = false;
     let policy = Box::new(POLICY_NETWORK);
 
+    let mut prevs = None;
+
     let mut args = std::env::args();
 
     if let Some("bench") = args.nth(1).as_deref() {
@@ -35,7 +37,7 @@ fn main() {
             "uci" => uci::preamble(),
             "isready" => uci::isready(),
             "setoption" => uci::setoption(&commands, &mut params, &mut report_moves),
-            "position" => uci::position(commands, &mut pos, &mut stack),
+            "position" => uci::position(commands, &mut pos, &mut stack, &mut prevs),
             "go" => uci::go(
                 &commands,
                 stack.clone(),
@@ -43,10 +45,12 @@ fn main() {
                 &params,
                 report_moves,
                 &policy,
+                &mut prevs,
             ),
             "perft" => uci::run_perft(&commands, &pos),
             "eval" => uci::eval(&pos, &policy),
             "quit" => std::process::exit(0),
+            "ucinewgame" => prevs = None,
             _ => {}
         }
     }
@@ -62,7 +66,7 @@ fn run_bench(params: &TunableParams, policy: &PolicyNetwork) {
     for fen in bench_fens {
         let pos = Position::parse_fen(fen);
         let mut searcher = Searcher::new(pos, Vec::new(), 1_000_000, params.clone(), policy);
-        searcher.search(None, 5, false, false, &mut total_nodes);
+        searcher.search(None, 5, false, false, &mut total_nodes, None);
     }
 
     println!(

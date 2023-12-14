@@ -10,6 +10,7 @@ pub struct Node {
     wins: f32,
     left: usize,
     state: GameState,
+    hash: u64,
     pub moves: MoveList,
 }
 
@@ -19,6 +20,7 @@ impl Node {
         let state = pos.game_state(&moves, stack);
         Self {
             state,
+            hash: pos.hash(),
             ..Default::default()
         }
     }
@@ -254,6 +256,41 @@ impl<'a> Searcher<'a> {
         (pv, score)
     }
 
+    fn construct_subtree(&self, node_ptr: i32, subtree: &mut Vec<Node>) {
+        if node_ptr == -1 {
+            return;
+        }
+
+        let node = &self.tree[node_ptr as usize];
+        subtree.push(node.clone());
+
+        let idx = subtree.len() - 1;
+
+        for (i, mov) in node.moves.iter().enumerate() {
+            let new_ptr = mov.ptr();
+            let curr_len = subtree.len();
+
+            subtree[idx].moves[i].set_ptr(curr_len as i32);
+            self.construct_subtree(new_ptr, subtree);
+        }
+    }
+
+    fn find_mov_ptr(&self, start: i32, mov: &Move) -> i32 {
+        if start == -1 {
+            return -1;
+        }
+
+        let node = &self.tree[start as usize];
+
+        for child_mov in node.moves.iter() {
+            if child_mov.is_same(mov) {
+                return child_mov.ptr();
+            }
+        }
+
+        -1
+    }
+
     pub fn search(
         &mut self,
         max_time: Option<u128>,
@@ -261,9 +298,27 @@ impl<'a> Searcher<'a> {
         report_moves: bool,
         uci_output: bool,
         total_nodes: &mut usize,
+        prevs: Option<(Move, Move)>
     ) -> (Move, f32) {
         let timer = Instant::now();
-        self.tree.clear();
+
+        if !self.tree.is_empty() {
+            if self.startpos.hash() != self.tree[0].hash {
+                self.tree.clear();
+            } else if let Some((prev_prev, prev)) = prevs {
+                let prev_prev_ptr = self.find_mov_ptr(0, &prev_prev);
+                let prev_ptr = self.find_mov_ptr(prev_prev_ptr, &prev);
+                if prev_ptr == -1 {
+                    self.tree.clear();
+                } else {
+                    let mut subtree = Vec::new();
+                    self.construct_subtree(prev_ptr, &mut subtree);
+                    self.tree = subtree;
+                }
+            } else {
+                self.tree.clear();
+            }
+        }
 
         let mut root_node = Node::new(&self.startpos, &[]);
         root_node.expand(&self.startpos, self.policy);
