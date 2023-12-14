@@ -310,15 +310,18 @@ impl<'a> Searcher<'a> {
                     let mut subtree = Vec::new();
                     self.construct_subtree(prev_ptr, &mut subtree);
                     self.tree = subtree;
+                    println!("info string did not clear subtree");
                 }
             } else {
                 self.tree.clear();
             }
         }
 
-        let mut root_node = Node::new(&self.startpos, &[]);
-        root_node.expand(&self.startpos, self.policy);
-        self.tree.push(root_node);
+        if self.tree.is_empty() {
+            let mut root_node = Node::new(&self.startpos, &[]);
+            root_node.expand(&self.startpos, self.policy);
+            self.tree.push(root_node);
+        }
 
         let mut nodes = 1;
         let mut depth = 0;
