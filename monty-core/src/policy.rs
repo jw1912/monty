@@ -1,6 +1,6 @@
 use crate::{Flag, Move, Position};
 
-use goober::{Vector, Matrix, activation::ReLU, layer::SparseConnected, FeedForwardNetwork, SparseVector};
+use goober::{Vector, Matrix, activation::ReLU, layer::{SparseConnected, Add, DenseConnected}, FeedForwardNetwork, SparseVector};
 
 pub static POLICY_NETWORK: PolicyNetwork =
     unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
@@ -8,13 +8,26 @@ pub static POLICY_NETWORK: PolicyNetwork =
 #[repr(C)]
 #[derive(Clone, Copy, FeedForwardNetwork)]
 pub struct SubNet {
+    ft: Add<SparseConnected<ReLU, 768, 16>, SubSubNet>,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, FeedForwardNetwork)]
+pub struct SubSubNet {
     ft: SparseConnected<ReLU, 768, 16>,
+    l2: DenseConnected<ReLU, 16, 16>,
 }
 
 impl SubNet {
     pub const fn zeroed() -> Self {
         Self {
-            ft: SparseConnected::zeroed(),
+            ft: Add::from_raw(
+                SparseConnected::zeroed(),
+                SubSubNet {
+                    ft: SparseConnected::zeroed(),
+                    l2: DenseConnected::zeroed()
+                },
+            ),
         }
     }
 
@@ -25,8 +38,26 @@ impl SubNet {
         }
         let m = Matrix::from_raw(v);
 
+        let mut v = [Vector::zeroed(); 768];
+        for r in v.iter_mut() {
+            *r = Vector::from_fn(|_| f());
+        }
+        let m2 = Matrix::from_raw(v);
+
+        let mut v = [Vector::zeroed(); 16];
+        for r in v.iter_mut() {
+            *r = Vector::from_fn(|_| f());
+        }
+        let m3 = Matrix::from_raw(v);
+
         Self {
-            ft: SparseConnected::from_raw(m, Vector::from_fn(|_| f())),
+            ft: Add::from_raw(
+                SparseConnected::from_raw(m, Vector::from_fn(|_| f())),
+                SubSubNet {
+                    ft: SparseConnected::from_raw(m2, Vector::from_fn(|_| f())),
+                    l2: DenseConnected::from_raw(m3, Vector::from_fn(|_| f())),
+                },
+            ),
         }
     }
 }
