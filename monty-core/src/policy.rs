@@ -2,8 +2,8 @@ use crate::{Flag, Move, Position};
 
 use goober::{activation, layer, FeedForwardNetwork, SparseVector, Matrix, Vector};
 
-pub static POLICY_NETWORK: PolicyNetwork = PolicyNetwork { weights: [SubNet::zeroed(); 128], hce: [0.0; 4] };
-    //unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
+pub static POLICY_NETWORK: PolicyNetwork =
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/policy.bin")) };
 
 #[repr(C)]
 #[derive(Clone, Copy, FeedForwardNetwork)]
