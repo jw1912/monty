@@ -390,7 +390,7 @@ impl Position {
         // updating state
         self.stm = !self.stm;
         self.enp_sq = 0;
-        self.rights &= CASTLE_MASK[usize::from(mov.to())] & CASTLE_MASK[usize::from(mov.from())];
+        self.rights &= castling.mask(usize::from(mov.to())) & castling.mask(usize::from(mov.from()));
         self.halfm += 1;
 
         if mov.moved() == Piece::PAWN as u8 || mov.is_capture() {
@@ -493,7 +493,7 @@ impl Position {
         if checkers == 0 {
             self.gen_pnbrq::<QUIETS>(&mut moves, u64::MAX, u64::MAX, pinned, castling);
             if QUIETS {
-                self.castles(&mut moves, self.occ(), threats, castling);
+                self.castles(&mut moves, self.occ(), threats, castling, pinned);
             }
         } else if checkers & (checkers - 1) == 0 {
             let checker_sq = checkers.trailing_zeros() as usize;
@@ -562,46 +562,37 @@ impl Position {
         self.piece_moves::<QUIETS, { Piece::QUEEN }>(moves, check_mask, pinned);
     }
 
-    fn castles(&self, moves: &mut MoveList, occ: u64, threats: u64, castling: &Castling) {
+    fn castles(&self, moves: &mut MoveList, occ: u64, threats: u64, castling: &Castling, pinned: u64) {
         let kbb = self.bb[Piece::KING] & self.bb[self.stm()];
         let ksq = kbb.trailing_zeros() as u8;
 
+        let can_castle = |right: u8, kto: u64, rto: u64| {
+            let side = self.stm();
+            let ks = usize::from([Right::BKS, Right::WKS].contains(&right));
+            let bit = 1 << (56 * side + usize::from(castling.rook_file(side, ks)));
+
+            self.rights & right > 0
+                && bit & pinned == 0
+                && (occ ^ bit) & (btwn(kbb, kto) ^ kto) == 0
+                && (occ ^ kbb) & (btwn(bit, rto) ^ rto) == 0
+                && (btwn(kbb, kto) | kto) & threats == 0
+        };
+
         if self.stm() == Side::BLACK {
-            if self.can_castle(Right::BQS, occ, kbb, 1 << 58, 1 << 59, threats, castling) {
+            if can_castle(Right::BQS, 1 << 58, 1 << 59) {
                 moves.push(ksq, 58, Flag::QS, Piece::KING);
             }
-            if self.can_castle(Right::BKS, occ, kbb, 1 << 62, 1 << 61, threats, castling) {
+            if can_castle(Right::BKS, 1 << 62, 1 << 61) {
                 moves.push(ksq, 62, Flag::KS, Piece::KING);
             }
         } else {
-            if self.can_castle(Right::WQS, occ, kbb, 1 << 2, 1 << 3, threats, castling) {
+            if can_castle(Right::WQS, 1 << 2, 1 << 3) {
                 moves.push(ksq, 2, Flag::QS, Piece::KING);
             }
-            if self.can_castle(Right::WKS, occ, kbb, 1 << 6, 1 << 5, threats, castling) {
+            if can_castle(Right::WKS, 1 << 6, 1 << 5) {
                 moves.push(ksq, 6, Flag::KS, Piece::KING);
             }
         }
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn can_castle(
-        &self,
-        right: u8,
-        occ: u64,
-        kbb: u64,
-        kto: u64,
-        rto: u64,
-        threats: u64,
-        castling: &Castling,
-    ) -> bool {
-        let side = self.stm();
-        let ks = usize::from([Right::BKS, Right::WKS].contains(&right));
-        let bit = 1 << (56 * side + usize::from(castling.rook_file(side, ks)));
-        self.rights & right > 0
-            && (occ ^ bit) & (btwn(kbb, kto) ^ kto) == 0
-            && (occ ^ kbb) & (btwn(bit, rto) ^ rto) == 0
-            && btwn(kbb, kto) & threats == 0
-            && kto & threats == 0
     }
 
     #[must_use]
@@ -817,7 +808,21 @@ impl Position {
 
         fen.push(' ');
         fen.push(['w', 'b'][self.stm()]);
-        fen.push_str(" - - 0 1");
+        fen.push(' ');
+
+        if self.rights == 0 {
+            fen.push('-');
+        } else {
+            let mut r = self.rights;
+            while r > 0 {
+                let q = r.trailing_zeros();
+                r &= r - 1;
+                fen.push(['k', 'q', 'K', 'Q'][q as usize]);
+            }
+        }
+
+
+        fen.push_str(" - 0 1");
 
         fen
     }

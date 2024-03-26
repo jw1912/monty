@@ -10,6 +10,7 @@ pub fn preamble() {
     println!("id name monty {}", env!("CARGO_PKG_VERSION"));
     println!("id author Jamie Whiting");
     println!("option name report_moves type button");
+    println!("option name UCI_Chess960 type check default false");
     TunableParams::uci_info();
     println!("uciok");
 }
@@ -189,7 +190,7 @@ pub fn eval(pos: &Position, policy: &PolicyNetwork, castling: &Castling) {
 pub fn run_perft(commands: &[&str], pos: &Position, castling: &Castling) {
     let depth = commands[1].parse().unwrap();
     let now = Instant::now();
-    let count = perft::<false, true>(pos, depth, castling);
+    let count = perft::<true, true>(pos, depth, castling);
     let time = now.elapsed().as_micros();
     println!(
         "perft {depth} time {} nodes {count} ({:.2} Mnps)",

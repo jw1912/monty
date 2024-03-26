@@ -44,17 +44,6 @@ impl Right {
     pub const BKS: u8 = 0b0001;
 }
 
-// mask off castling rights by square
-pub const CASTLE_MASK: [u8; 64] = init!(|idx, 64| match idx {
-    0 => 7,
-    4 => 3,
-    7 => 11,
-    56 => 13,
-    60 => 12,
-    63 => 14,
-    _ => 15,
-});
-
 // for promotions / double pushes
 pub struct Rank;
 impl Rank {
