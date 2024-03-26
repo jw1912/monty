@@ -1,6 +1,6 @@
 use crate::{mcts::{Searcher, Node}, params::TunableParams};
 
-use monty_core::{cp_wdl, perft, PolicyNetwork, Position, STARTPOS, Move};
+use monty_core::{cp_wdl, perft, Castling, Move, PolicyNetwork, Position, STARTPOS};
 
 use std::time::Instant;
 
@@ -33,7 +33,7 @@ pub fn setoption(commands: &[&str], params: &mut TunableParams, report_moves: &m
     params.set(name, val as f32 / 100.0);
 }
 
-pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, prevs: &mut Option<(Move, Move)>) {
+pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, prevs: &mut Option<(Move, Move)>, castling: &mut Castling) {
     let mut fen = String::new();
     let mut move_list = Vec::new();
     let mut moves = false;
@@ -54,18 +54,18 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, p
         }
     }
 
-    *pos = Position::parse_fen(&fen);
+    *pos = Position::parse_fen(&fen, castling);
     stack.clear();
 
     let len = move_list.len();
 
     for (i, &m) in move_list.iter().enumerate() {
         stack.push(pos.hash());
-        let possible_moves = pos.gen::<true>();
+        let possible_moves = pos.gen::<true>(castling);
 
         for mov in possible_moves.iter() {
             if m == mov.to_uci() {
-                pos.make(*mov, None);
+                pos.make(*mov, None, castling);
 
                 if i == len - 1 {
                     if let Some((_, y)) = prevs.as_mut() {
@@ -83,6 +83,7 @@ pub fn go(
     tree: Vec<Node>,
     stack: Vec<u64>,
     pos: &Position,
+    castling: &Castling,
     params: &TunableParams,
     report_moves: bool,
     policy: &PolicyNetwork,
@@ -146,7 +147,7 @@ pub fn go(
         *t = t.saturating_sub(5);
     }
 
-    let mut searcher = Searcher::new(*pos, stack, nodes, params.clone(), policy);
+    let mut searcher = Searcher::new(*castling, *pos, stack, nodes, params.clone(), policy);
     searcher.tree = tree;
 
     let (mov, _) = searcher.search(time, max_depth, report_moves, true, &mut 0, *prevs);
@@ -158,8 +159,8 @@ pub fn go(
     searcher.tree
 }
 
-pub fn eval(pos: &Position, policy: &PolicyNetwork) {
-    let mut moves = pos.gen::<true>();
+pub fn eval(pos: &Position, policy: &PolicyNetwork, castling: &Castling) {
+    let mut moves = pos.gen::<true>(castling);
     moves.set_policies(pos, policy);
 
     let mut w = [0f32; 64];
@@ -185,10 +186,10 @@ pub fn eval(pos: &Position, policy: &PolicyNetwork) {
     println!("wdl : {:.2}%", cp_wdl(eval_cp) * 100.0);
 }
 
-pub fn run_perft(commands: &[&str], pos: &Position) {
+pub fn run_perft(commands: &[&str], pos: &Position, castling: &Castling) {
     let depth = commands[1].parse().unwrap();
     let now = Instant::now();
-    let count = perft::<false, true>(pos, depth);
+    let count = perft::<false, true>(pos, depth, castling);
     let time = now.elapsed().as_micros();
     println!(
         "perft {depth} time {} nodes {count} ({:.2} Mnps)",
