@@ -907,7 +907,7 @@ pub fn perft<const ROOT: bool, const BULK: bool>(pos: &Position, depth: u8, cast
         positions += num;
 
         if ROOT {
-            println!("{}: {num}", moves[m_idx].to_uci());
+            println!("{}: {num}", moves[m_idx].to_uci(castling));
         }
     }
 

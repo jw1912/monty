@@ -26,6 +26,10 @@ pub fn setoption(commands: &[&str], params: &mut TunableParams, report_moves: &m
     }
 
     let (name, val) = if let ["setoption", "name", x, "value", y] = commands {
+        if *x == "UCI_Chess960" {
+            return;
+        }
+
         (*x, y.parse::<i32>().unwrap())
     } else {
         return;
@@ -65,7 +69,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, p
         let possible_moves = pos.gen::<true>(castling);
 
         for mov in possible_moves.iter() {
-            if m == mov.to_uci() {
+            if m == mov.to_uci(castling) {
                 pos.make(*mov, None, castling);
 
                 if i == len - 1 {
@@ -155,7 +159,7 @@ pub fn go(
 
     *prevs = Some((mov, Move::NULL));
 
-    println!("bestmove {}", mov.to_uci());
+    println!("bestmove {}", mov.to_uci(castling));
 
     searcher.tree
 }

@@ -244,7 +244,7 @@ impl<'a> Searcher<'a> {
             if REPORT {
                 println!(
                     "info move {} score wdl {:.2}% ({:.2} / {})",
-                    mov.to_uci(),
+                    mov.to_uci(&self.castling),
                     score * 100.0,
                     node.wins,
                     node.visits,
@@ -387,7 +387,7 @@ impl<'a> Searcher<'a> {
                     let elapsed = timer.elapsed();
                     let nps = nodes as f32 / elapsed.as_secs_f32();
                     let pv = pv_line.iter().fold(String::new(), |mut pv_str, mov| {
-                        write!(&mut pv_str, "{} ", mov.to_uci()).unwrap();
+                        write!(&mut pv_str, "{} ", mov.to_uci(&self.castling)).unwrap();
                         pv_str
                     });
 
