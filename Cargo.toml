@@ -12,3 +12,7 @@ codegen-units = 1
 
 [dependencies]
 goober = { git = 'https://github.com/jw1912/goober.git' }
+
+[workspace]
+members = ["datagen", "train"]
+resolver = "2"

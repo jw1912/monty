@@ -30,6 +30,10 @@ impl Board {
         self.bb[piece]
     }
 
+    pub fn bbs(&self) -> [u64; 8] {
+        self.bb
+    }
+
     #[must_use]
     pub fn stm(&self) -> usize {
         usize::from(self.stm)

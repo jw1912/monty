@@ -39,6 +39,14 @@ impl<T: GameRep> Node<T> {
     fn is_terminal(&self) -> bool {
         self.state != GameState::Ongoing
     }
+
+    pub fn moves(&self) -> MoveList<T::Move> {
+        self.moves.clone()
+    }
+
+    pub fn visits(&self) -> i32 {
+        self.visits
+    }
 }
 
 pub struct Searcher<'a, T: GameRep> {

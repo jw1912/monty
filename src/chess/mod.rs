@@ -15,6 +15,19 @@ pub use self::{policy::POLICY_NETWORK, value::NNUE};
 
 const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+pub struct Uci;
+impl UciLike for Uci {
+    const NAME: &'static str = "uci";
+    const NEWGAME: &'static str = "ucinewgame";
+    const OK: &'static str = "uciok";
+
+    type Game = Chess;
+
+    fn options() {
+        println!("option name UCI_Chess960 type check default false");
+    }
+}
+
 #[derive(Clone)]
 pub struct Chess {
     board: Board,
@@ -31,16 +44,9 @@ impl Default for Chess {
     }
 }
 
-pub struct Uci;
-impl UciLike for Uci {
-    const NAME: &'static str = "uci";
-    const NEWGAME: &'static str = "ucinewgame";
-    const OK: &'static str = "uciok";
-
-    type Game = Chess;
-
-    fn options() {
-        println!("option name UCI_Chess960 type check default false");
+impl Chess {
+    pub fn bbs(&self) -> [u64; 8] {
+        self.board.bbs()
     }
 }
 

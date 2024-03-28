@@ -9,9 +9,9 @@ pub enum GameState {
     Won,
 }
 
-pub trait GameRep: Clone + Default {
-    type Policy;
-    type Value;
+pub trait GameRep: Clone + Default + Send + Sync {
+    type Policy: Send + Sync;
+    type Value: Send + Sync;
     type Move: MoveType;
     //const MAX_MOVES: usize;
     const STARTPOS: &'static str;

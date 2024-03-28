@@ -3,6 +3,20 @@
 version = 3
 
 [[package]]
+name = "bulletformat"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "368ed94b9a07475d42d5e6de3a084383cd6cb19c4ca43c2bfcd9ca25656b43a2"
+
+[[package]]
+name = "datagen"
+version = "0.1.0"
+dependencies = [
+ "bulletformat",
+ "monty",
+]
+
+[[package]]
 name = "goober"
 version = "0.1.0"
 source = "git+https://github.com/jw1912/goober.git#344f2ddf9a5b9ce0022fa7e374b2331cc8487a7c"
@@ -69,6 +83,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "train"
+version = "0.1.0"
+dependencies = [
+ "goober",
+ "monty",
 ]
 
 [[package]]
