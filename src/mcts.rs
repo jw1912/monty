@@ -1,109 +1,82 @@
-use crate::{params::TunableParams, qsearch::quiesce};
-
-use monty_core::{cp_wdl, Castling, GameState, Move, MoveList, PolicyNetwork, Position};
+use crate::{
+    game::{GameRep, GameState},
+    moves::{MoveList, MoveType}, params::TunableParams,
+};
 
 use std::{fmt::Write, time::Instant};
 
+#[derive(Clone, Copy)]
+pub struct Limits {
+    pub max_time: Option<u128>,
+    pub max_depth: usize,
+    pub max_nodes: usize,
+}
+
 #[derive(Clone, Default)]
-pub struct Node {
+pub struct Node<T: GameRep> {
     visits: i32,
     wins: f32,
     left: usize,
     state: GameState,
-    pub moves: MoveList,
+    moves: MoveList<T::Move>,
 }
 
-impl Node {
-    fn new(pos: &Position, stack: &[u64], castling: &Castling) -> Self {
-        let moves = pos.gen::<true>(castling);
-        let state = pos.game_state(&moves, stack);
+impl<T: GameRep> Node<T> {
+    fn new(pos: &T) -> Self {
+        let state = pos.game_state();
         Self {
             state,
             ..Default::default()
         }
     }
 
-    fn expand(&mut self, pos: &Position, params: &PolicyNetwork, castling: &Castling) {
-        self.moves = pos.gen::<true>(castling);
-        self.moves.set_policies(pos, params);
+    fn expand(&mut self, pos: &T, policy: &T::PolicyNet) {
+        self.moves = pos.gen_legal_moves();
+        pos.set_policies(policy, &mut self.moves);
         self.left = self.moves.len();
     }
 
     fn is_terminal(&self) -> bool {
         self.state != GameState::Ongoing
     }
-
-    pub fn visits(&self) -> i32 {
-        self.visits
-    }
 }
 
-pub struct Searcher<'a> {
-    pub castling: Castling,
-    pub startpos: Position,
-    pub startstack: Vec<u64>,
-    pub tree: Vec<Node>,
-    pos: Position,
-    stack: Vec<u64>,
-    node_limit: usize,
+pub struct Searcher<'a, T: GameRep> {
+    root_position: T,
+    tree: Vec<Node<T>>,
     selection: Vec<i32>,
+    policy: &'a T::PolicyNet,
+    value: &'a T::ValueNet,
     params: TunableParams,
-    policy: &'a PolicyNetwork,
 }
 
-impl<'a> Searcher<'a> {
+impl<'a, T: GameRep> Searcher<'a, T> {
     pub fn new(
-        castling: Castling,
-        pos: Position,
-        stack: Vec<u64>,
-        node_limit: usize,
+        root_position: T,
+        tree: Vec<Node<T>>,
+        policy: &'a T::PolicyNet,
+        value: &'a T::ValueNet,
         params: TunableParams,
-        policy: &'a PolicyNetwork,
     ) -> Self {
         Self {
-            castling,
-            startpos: pos,
-            startstack: stack.clone(),
-            pos,
-            tree: Vec::new(),
-            stack,
-            node_limit,
+            root_position,
+            tree,
             selection: Vec::new(),
-            params,
             policy,
+            value,
+            params,
         }
     }
 
-    pub fn set(
-        &mut self,
-        pos: Position,
-        stack: Vec<u64>,
-        node_limit: usize,
-        params: TunableParams,
-        policy: &'a PolicyNetwork,
-        tree: Vec<Node>,
-    ) {
-        self.startpos = pos;
-        self.startstack = stack.clone();
-        self.pos = pos;
-        self.tree = tree;
-        self.stack = stack;
-        self.node_limit = node_limit;
-        self.selection = Vec::new();
-        self.params = params;
-        self.policy = policy;
-    }
-
-    fn make_move(&mut self, mov: Move) {
-        self.stack.push(self.pos.hash());
-        self.pos.make(mov, None, &self.castling);
+    pub fn tree(self) -> Vec<Node<T>> {
+        self.tree
     }
 
     fn selected(&self) -> i32 {
         *self.selection.last().unwrap()
     }
 
-    fn pick_child(&self, node: &Node) -> usize {
+    fn pick_child(&self, node: &Node<T>) -> usize {
         let expl = self.params.cpuct() * (node.visits.max(1) as f32).sqrt();
 
         let mut best_idx = 0;
@@ -136,9 +109,7 @@ impl<'a> Searcher<'a> {
         best_idx
     }
 
-    fn select_leaf(&mut self) {
-        self.pos = self.startpos;
-        self.stack = self.startstack.clone();
+    fn select_leaf(&mut self, pos: &mut T) {
         self.selection.clear();
         self.selection.push(0);
 
@@ -148,7 +119,7 @@ impl<'a> Searcher<'a> {
             let node = &mut self.tree[node_ptr as usize];
 
             if node_ptr != 0 && node.visits == 1 {
-                node.expand(&self.pos, self.policy, &self.castling);
+                node.expand(pos, self.policy);
             }
 
             let node = &self.tree[node_ptr as usize];
@@ -169,13 +140,13 @@ impl<'a> Searcher<'a> {
                 break;
             }
 
-            self.make_move(mov);
+            pos.make_move(mov);
             self.selection.push(next);
             node_ptr = next;
         }
     }
 
-    fn expand_node(&mut self) {
+    fn expand_node(&mut self, pos: &mut T) {
         let node_ptr = self.selected();
         let node = &self.tree[node_ptr as usize];
 
@@ -191,9 +162,9 @@ impl<'a> Searcher<'a> {
         }
 
         let mov = node.moves[node.left];
-        self.make_move(mov);
+        pos.make_move(mov);
 
-        let new_node = Node::new(&self.pos, &self.stack, &self.castling);
+        let new_node = Node::new(pos);
         self.tree.push(new_node);
 
         let new_ptr = self.tree.len() as i32 - 1;
@@ -204,19 +175,16 @@ impl<'a> Searcher<'a> {
         self.selection.push(to_explore.ptr());
     }
 
-    fn simulate(&self) -> f32 {
+    fn simulate(&self, pos: &T) -> f32 {
         let node_ptr = self.selected();
 
         let node = &self.tree[node_ptr as usize];
 
         match node.state {
-            GameState::Lost => -self.params.mate_bonus(),
+            GameState::Ongoing => pos.get_value(self.value),
             GameState::Draw => 0.5,
-            GameState::Ongoing => {
-                let accs = self.pos.get_accs();
-                let qs = quiesce(&self.pos, &self.castling, &accs, -30_000, 30_000);
-                cp_wdl(qs)
-            }
+            GameState::Lost => -self.params.mate_bonus(),
+            GameState::Won => 1.0 + self.params.mate_bonus(),
         }
     }
 
@@ -229,7 +197,7 @@ impl<'a> Searcher<'a> {
         }
     }
 
-    fn get_bestmove<const REPORT: bool>(&self, root_node: &Node) -> (Move, f32) {
+    fn get_bestmove<const REPORT: bool>(&self, root_node: &Node<T>) -> (T::Move, f32) {
         let mut best_move = root_node.moves[0];
         let mut best_score = 0.0;
 
@@ -244,7 +212,7 @@ impl<'a> Searcher<'a> {
             if REPORT {
                 println!(
                     "info move {} score wdl {:.2}% ({:.2} / {})",
-                    mov.to_uci(&self.castling),
+                    self.root_position.conv_mov_to_str(*mov),
                     score * 100.0,
                     node.wins,
                     node.visits,
@@ -260,14 +228,14 @@ impl<'a> Searcher<'a> {
         (best_move, best_score)
     }
 
-    fn get_pv(&self) -> (Vec<Move>, f32) {
+    fn get_pv(&self, mut depth: usize) -> (Vec<T::Move>, f32) {
         let mut node = &self.tree[0];
 
         let (mut mov, score) = self.get_bestmove::<false>(node);
 
         let mut pv = Vec::new();
 
-        while mov.ptr() != -1 {
+        while depth > 0 && mov.ptr() != -1 {
             pv.push(mov);
             node = &self.tree[mov.ptr() as usize];
 
@@ -276,12 +244,13 @@ impl<'a> Searcher<'a> {
             }
 
             mov = self.get_bestmove::<false>(node).0;
+            depth -= 1;
         }
 
         (pv, score)
     }
 
-    fn construct_subtree(&self, node_ptr: i32, subtree: &mut Vec<Node>) {
+    fn construct_subtree(&self, node_ptr: i32, subtree: &mut Vec<Node<T>>) {
         if node_ptr == -1 {
             return;
         }
@@ -302,7 +271,7 @@ impl<'a> Searcher<'a> {
         }
     }
 
-    fn find_mov_ptr(&self, start: i32, mov: &Move) -> i32 {
+    fn find_mov_ptr(&self, start: i32, mov: &T::Move) -> i32 {
         if start == -1 {
             return -1;
         }
@@ -310,7 +279,7 @@ impl<'a> Searcher<'a> {
         let node = &self.tree[start as usize];
 
         for child_mov in node.moves.iter() {
-            if child_mov.is_same(mov) {
+            if child_mov.is_same_action(*mov) {
                 return child_mov.ptr();
             }
         }
@@ -320,13 +289,12 @@ impl<'a> Searcher<'a> {
 
     pub fn search(
         &mut self,
-        max_time: Option<u128>,
-        max_depth: usize,
+        limits: Limits,
         report_moves: bool,
         uci_output: bool,
         total_nodes: &mut usize,
-        prevs: Option<(Move, Move)>
-    ) -> (Move, f32) {
+        prevs: Option<(T::Move, T::Move)>
+    ) -> (T::Move, f32) {
         let timer = Instant::now();
 
         // attempt to reuse the previous tree
@@ -347,8 +315,8 @@ impl<'a> Searcher<'a> {
         }
 
         if self.tree.is_empty() {
-            let mut root_node = Node::new(&self.startpos, &[], &self.castling);
-            root_node.expand(&self.startpos, self.policy, &self.castling);
+            let mut root_node = Node::new(&self.root_position);
+            root_node.expand(&self.root_position, self.policy);
             self.tree.push(root_node);
         }
 
@@ -357,8 +325,10 @@ impl<'a> Searcher<'a> {
         let mut seldepth = 0;
         let mut cumulative_depth = 0;
 
-        while nodes <= self.node_limit {
-            self.select_leaf();
+        while nodes <= limits.max_nodes {
+            let mut pos = self.root_position.clone();
+
+            self.select_leaf(&mut pos);
 
             let this_depth = self.selection.len();
             cumulative_depth += this_depth;
@@ -366,14 +336,14 @@ impl<'a> Searcher<'a> {
             seldepth = seldepth.max(this_depth);
 
             if !self.tree[self.selected() as usize].is_terminal() {
-                self.expand_node();
+                self.expand_node(&mut pos);
             }
 
-            let result = self.simulate();
+            let result = self.simulate(&pos);
 
             self.backprop(result);
 
-            if let Some(time) = max_time {
+            if let Some(time) = limits.max_time {
                 if nodes % 128 == 0 && timer.elapsed().as_millis() >= time {
                     break;
                 }
@@ -383,11 +353,11 @@ impl<'a> Searcher<'a> {
                 depth = avg_depth;
 
                 if uci_output {
-                    let (pv_line, score) = self.get_pv();
+                    let (pv_line, score) = self.get_pv(depth);
                     let elapsed = timer.elapsed();
                     let nps = nodes as f32 / elapsed.as_secs_f32();
                     let pv = pv_line.iter().fold(String::new(), |mut pv_str, mov| {
-                        write!(&mut pv_str, "{} ", mov.to_uci(&self.castling)).unwrap();
+                        write!(&mut pv_str, "{} ", self.root_position.conv_mov_to_str(*mov)).unwrap();
                         pv_str
                     });
 
@@ -403,11 +373,12 @@ impl<'a> Searcher<'a> {
                         elapsed.as_millis(),
                     );
                 }
+
+                if depth >= limits.max_depth {
+                    break;
+                }
             }
 
-            if depth >= max_depth {
-                break;
-            }
 
             nodes += 1;
         }

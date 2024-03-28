@@ -20,7 +20,7 @@ impl Param {
         self.val = val.clamp(self.min, self.max);
     }
 
-    fn uci(&self, name: &str) {
+    fn info(&self, name: &str) {
         println!(
             "option name {} type spin default {:.0} min {:.0} max {:.0}",
             name,
@@ -49,11 +49,11 @@ impl TunableParams {
         self.mate_bonus.val
     }
 
-    pub fn uci_info() {
+    pub fn info() {
         let def = Self::default();
 
-        def.cpuct.uci("cpuct");
-        def.mate_bonus.uci("mate_bonus");
+        def.cpuct.info("cpuct");
+        def.mate_bonus.info("mate_bonus");
     }
 
     pub fn set(&mut self, name: &str, val: f32) {

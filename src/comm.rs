@@ -1,25 +1,64 @@
-use crate::{mcts::{Searcher, Node}, params::TunableParams};
-
-use monty_core::{cp_wdl, perft, Castling, Move, PolicyNetwork, Position, STARTPOS};
+use crate::{game::GameRep, mcts::{Limits, Node, Searcher}, params::TunableParams};
 
 use std::time::Instant;
 
-const KIWIPETE: &str = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+pub trait UciLike {
+    type Game: GameRep;
+    const NAME: &'static str;
+    const NEWGAME: &'static str;
 
-pub fn preamble() {
+    fn options();
+}
+
+pub fn run<T: UciLike>(
+    policy: &<T::Game as GameRep>::PolicyNet,
+    value: &<T::Game as GameRep>::ValueNet,
+) {
+    let mut prevs = None;
+    let mut pos = T::Game::default();
+    let mut params = TunableParams::default();
+    let mut tree = Vec::new();
+    let mut report_moves = false;
+
+    loop {
+        let mut input = String::new();
+        let bytes_read = std::io::stdin().read_line(&mut input).unwrap();
+
+        if bytes_read == 0 {
+            break;
+        }
+
+        let commands = input.split_whitespace().collect::<Vec<_>>();
+
+        let cmd = *commands.first().unwrap_or(&"oops");
+        match cmd {
+            "isready" => println!("readyok"),
+            "setoption" => setoption(&commands, &mut params, &mut report_moves),
+            "position" => position(commands, &mut pos, &mut prevs),
+            "go" => tree = go(&commands, tree, &pos, &params, report_moves, policy, value, &mut prevs),
+            "perft" => run_perft::<T::Game>(&commands, &pos),
+            "quit" => std::process::exit(0),
+            _ => {
+                if cmd == T::NAME {
+                    preamble::<T>();
+                } else if cmd == T::NEWGAME {
+                    prevs = None;
+                }
+            }
+        }
+    }
+}
+
+fn preamble<T: UciLike>() {
     println!("id name monty {}", env!("CARGO_PKG_VERSION"));
     println!("id author Jamie Whiting");
     println!("option name report_moves type button");
-    println!("option name UCI_Chess960 type check default false");
-    TunableParams::uci_info();
+    T::options();
+    TunableParams::info();
     println!("uciok");
 }
 
-pub fn isready() {
-    println!("readyok");
-}
-
-pub fn setoption(commands: &[&str], params: &mut TunableParams, report_moves: &mut bool) {
+fn setoption(commands: &[&str], params: &mut TunableParams, report_moves: &mut bool) {
     if let ["setoption", "name", "report_moves"] = commands {
         *report_moves = !*report_moves;
         return;
@@ -38,7 +77,7 @@ pub fn setoption(commands: &[&str], params: &mut TunableParams, report_moves: &m
     params.set(name, val as f32 / 100.0);
 }
 
-pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, prevs: &mut Option<(Move, Move)>, castling: &mut Castling) {
+fn position<T: GameRep>(commands: Vec<&str>, pos: &mut T, prevs: &mut Option<(T::Move, T::Move)>) {
     let mut fen = String::new();
     let mut move_list = Vec::new();
     let mut moves = false;
@@ -46,8 +85,7 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, p
     for cmd in commands {
         match cmd {
             "position" | "fen" => {}
-            "startpos" => fen = STARTPOS.to_string(),
-            "kiwipete" => fen = KIWIPETE.to_string(),
+            "startpos" => fen = T::STARTPOS.to_string(),
             "moves" => moves = true,
             _ => {
                 if moves {
@@ -59,18 +97,16 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, p
         }
     }
 
-    *pos = Position::parse_fen(&fen, castling);
-    stack.clear();
+    *pos = T::from_fen(&fen);
 
     let len = move_list.len();
 
     for (i, &m) in move_list.iter().enumerate() {
-        stack.push(pos.hash());
-        let possible_moves = pos.gen::<true>(castling);
+        let possible_moves = pos.gen_legal_moves();
 
         for mov in possible_moves.iter() {
-            if m == mov.to_uci(castling) {
-                pos.make(*mov, None, castling);
+            if m == pos.conv_mov_to_str(*mov) {
+                pos.make_move(*mov);
 
                 if i == len - 1 {
                     if let Some((_, y)) = prevs.as_mut() {
@@ -83,18 +119,17 @@ pub fn position(commands: Vec<&str>, pos: &mut Position, stack: &mut Vec<u64>, p
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn go(
+fn go<T: GameRep>(
     commands: &[&str],
-    tree: Vec<Node>,
-    stack: Vec<u64>,
-    pos: &Position,
-    castling: &Castling,
+    tree: Vec<Node<T>>,
+    pos: &T,
     params: &TunableParams,
     report_moves: bool,
-    policy: &PolicyNetwork,
-    prevs: &mut Option<(Move, Move)>,
-) -> Vec<Node> {
-    let mut nodes = 10_000_000;
+    policy: &T::PolicyNet,
+    value: &T::ValueNet,
+    prevs: &mut Option<(T::Move, T::Move)>,
+) -> Vec<Node<T>> {
+    let mut max_nodes = 10_000_000;
     let mut max_time = None;
     let mut max_depth = 256;
 
@@ -115,7 +150,7 @@ pub fn go(
             "binc" => mode = "binc",
             "movestogo" => mode = "movestogo",
             _ => match mode {
-                "nodes" => nodes = cmd.parse().unwrap_or(nodes),
+                "nodes" => max_nodes = cmd.parse().unwrap_or(max_nodes),
                 "movetime" => max_time = cmd.parse().ok(),
                 "depth" => max_depth = cmd.parse().unwrap_or(max_depth),
                 "wtime" => times[0] = Some(cmd.parse().unwrap_or(0)),
@@ -152,49 +187,34 @@ pub fn go(
         *t = t.saturating_sub(5);
     }
 
-    let mut searcher = Searcher::new(*castling, *pos, stack, nodes, params.clone(), policy);
-    searcher.tree = tree;
+    let mut searcher = Searcher::new(
+        pos.clone(),
+        tree,
+        policy,
+        value,
+        params.clone(),
+    );
 
-    let (mov, _) = searcher.search(time, max_depth, report_moves, true, &mut 0, *prevs);
+    let limits = Limits {
+        max_time,
+        max_depth,
+        max_nodes,
+    };
 
-    *prevs = Some((mov, Move::NULL));
+    let (mov, _) = searcher.search(limits, report_moves, true, &mut 0, *prevs);
 
-    println!("bestmove {}", mov.to_uci(castling));
+    *prevs = Some((mov, T::Move::default()));
 
-    searcher.tree
+    println!("bestmove {}", pos.conv_mov_to_str(mov));
+
+    searcher.tree()
 }
 
-pub fn eval(pos: &Position, policy: &PolicyNetwork, castling: &Castling) {
-    let mut moves = pos.gen::<true>(castling);
-    moves.set_policies(pos, policy);
-
-    let mut w = [0f32; 64];
-    let mut count = [0; 64];
-
-    for mov in moves.iter() {
-        let fr = usize::from(mov.from());
-        let to = usize::from(mov.to());
-
-        w[fr] = w[fr].max(mov.policy());
-        w[to] = w[fr].max(mov.policy());
-
-        count[fr] += 1;
-        count[to] += 1;
-    }
-
-    println!("{}", pos.coloured_board(&count, &w));
-
-    let eval_cp = pos.eval_cp();
-
-    println!("fen : {}", pos.to_fen());
-    println!("eval: {eval_cp}cp");
-    println!("wdl : {:.2}%", cp_wdl(eval_cp) * 100.0);
-}
-
-pub fn run_perft(commands: &[&str], pos: &Position, castling: &Castling) {
+fn run_perft<T: GameRep>(commands: &[&str], pos: &T) {
     let depth = commands[1].parse().unwrap();
+    let mut root_pos = pos.clone();
     let now = Instant::now();
-    let count = perft::<true, true>(pos, depth, castling);
+    let count = root_pos.perft(depth);
     let time = now.elapsed().as_micros();
     println!(
         "perft {depth} time {} nodes {count} ({:.2} Mnps)",
