@@ -184,6 +184,15 @@ impl Board {
         feats
     }
 
+    pub fn move_from_u16(&self, mov: u16) -> Move {
+        let from = mov >> 10;
+        let to = (mov >> 4) & 63;
+        let flag = mov & 15;
+        let moved = self.get_pc(1 << from);
+
+        Move::new(from as u8, to as u8, flag as u8, moved)
+    }
+
     pub fn eval_from_acc(&self, accs: &[Accumulator; 2]) -> i32 {
         ValueNetwork::out(&accs[self.stm()], &accs[self.stm() ^ 1])
     }

@@ -1,6 +1,6 @@
 mod attacks;
 mod board;
-mod consts;
+pub mod consts;
 mod frc;
 mod moves;
 mod policy;
@@ -9,9 +9,9 @@ mod value;
 
 use crate::{comm::UciLike, game::{GameRep, GameState}, moves::{MoveList, MoveType}};
 
-use self::{board::Board, frc::Castling, moves::Move, policy::PolicyNetwork, qsearch::quiesce, value::ValueNetwork};
+use self::{frc::Castling, moves::Move, qsearch::quiesce};
 
-pub use self::{policy::POLICY_NETWORK, value::NNUE};
+pub use self::{board::Board, policy::{POLICY_NETWORK, PolicyNetwork, SubNet}, value::{NNUE, ValueNetwork}};
 
 const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -47,6 +47,10 @@ impl Default for Chess {
 impl Chess {
     pub fn bbs(&self) -> [u64; 8] {
         self.board.bbs()
+    }
+
+    pub fn board(&self) -> Board {
+        self.board
     }
 }
 

@@ -89,6 +89,7 @@ dependencies = [
 name = "train"
 version = "0.1.0"
 dependencies = [
+ "datagen",
  "goober",
  "monty",
 ]

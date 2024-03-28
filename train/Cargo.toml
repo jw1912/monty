@@ -5,5 +5,6 @@ edition = "2021"
 authors = ["Jamie Whiting"]
 
 [dependencies]
+datagen = { path = "../datagen" }
 monty = { path = "../" }
 goober = { git = 'https://github.com/jw1912/goober.git' }

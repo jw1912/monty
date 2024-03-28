@@ -186,7 +186,7 @@ impl<'a, T: DatagenSupport> DatagenThread<'a, T> {
     }
 }
 
-fn write<T>(input: &[T], output: &mut BufWriter<File>) {
+pub fn write<T>(input: &[T], output: &mut BufWriter<File>) {
     if input.is_empty() {
         return;
     }

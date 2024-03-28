@@ -1,1 +1,1 @@
-mod chess;
+pub mod chess;

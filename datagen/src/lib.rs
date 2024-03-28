@@ -6,7 +6,7 @@ use std::{sync::atomic::{AtomicBool, Ordering}, time::Duration};
 
 use bulletformat::BulletFormat;
 pub use rng::Rand;
-pub use thread::DatagenThread;
+pub use thread::{DatagenThread, write};
 
 use monty::{GameRep, TunableParams};
 

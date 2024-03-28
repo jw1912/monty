@@ -1,5 +1,5 @@
-use bulletformat::{BulletFormat, ChessBoard};
-use monty::{chess::Chess, GameRep};
+use bulletformat::ChessBoard;
+use monty::{chess::{Chess, Board}, GameRep};
 
 use crate::{DatagenSupport, PolicyFormat};
 
@@ -10,13 +10,15 @@ pub struct ChessMoveInfo {
 }
 
 pub struct ChessPolicyData {
-    board: ChessBoard,
-    moves: [ChessMoveInfo; 118],
-    num: usize,
+    pub board: Board,
+    pub result: f32,
+    pub score: f32,
+    pub moves: [ChessMoveInfo; 102],
+    pub num: usize,
 }
 
 impl PolicyFormat<Chess> for ChessPolicyData {
-    const MAX_MOVES: usize = 118;
+    const MAX_MOVES: usize = 102;
 
     fn push(&mut self, mov: <Chess as GameRep>::Move, visits: i16) {
         let from = u16::from(mov.from()) << 10;
@@ -31,7 +33,7 @@ impl PolicyFormat<Chess> for ChessPolicyData {
     }
 
     fn set_result(&mut self, result: f32) {
-        self.board.set_result(result);
+        self.result = result;
     }
 }
 
@@ -40,19 +42,16 @@ impl DatagenSupport for Chess {
     type ValueData = ChessBoard;
     type PolicyData = ChessPolicyData;
 
-    fn into_policy(pos: &Self, score: f32) -> Self::PolicyData {
-        let stm = pos.stm();
-        let bbs = pos.bbs();
-
-        let mut score = -(400.0 * (1.0 / score.clamp(0.03, 0.97) - 1.0).ln()) as i16;
-
+    fn into_policy(pos: &Self, mut score: f32) -> Self::PolicyData {
         if pos.stm() == 1 {
             score = -score;
         }
 
         ChessPolicyData {
-            board: ChessBoard::from_raw(bbs, stm, score, 0.5).unwrap(),
-            moves: [ChessMoveInfo::default(); 118],
+            board: pos.board(),
+            score,
+            result: 0.5,
+            moves: [ChessMoveInfo::default(); 102],
             num: 0,
         }
     }
