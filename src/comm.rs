@@ -222,7 +222,7 @@ fn go<T: GameRep>(
     );
 
     let limits = Limits {
-        max_time,
+        max_time: time,
         max_depth,
         max_nodes,
     };
