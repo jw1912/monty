@@ -72,6 +72,7 @@ impl GameRep for Chess {
     }
 
     fn make_move(&mut self, mov: Self::Move) {
+        self.stack.push(self.board.hash());
         self.board.make(mov, None, &self.castling);
     }
 

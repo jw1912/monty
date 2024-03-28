@@ -66,7 +66,6 @@ pub trait UciLike: Sized {
             let pos = Self::Game::from_fen(fen);
             let mut searcher = Searcher::new(pos, Vec::new(), policy, value, params.clone());
             searcher.search(limits, false, false, &mut total_nodes, None);
-            println!("{total_nodes}:{fen}");
         }
 
         println!(
