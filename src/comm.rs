@@ -59,13 +59,14 @@ pub trait UciLike: Sized {
         let limits = Limits {
             max_time: None,
             max_depth: depth,
-            max_nodes: 10_000_000,
+            max_nodes: 1_000_000,
         };
 
         for fen in bench_fens {
             let pos = Self::Game::from_fen(fen);
             let mut searcher = Searcher::new(pos, Vec::new(), policy, value, params.clone());
             searcher.search(limits, false, false, &mut total_nodes, None);
+            println!("{total_nodes}:{fen}");
         }
 
         println!(
