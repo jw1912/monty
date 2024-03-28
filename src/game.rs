@@ -10,10 +10,10 @@ pub enum GameState {
 }
 
 pub trait GameRep: Clone + Default {
-    type PolicyNet;
-    type ValueNet;
+    type Policy;
+    type Value;
     type Move: MoveType;
-    const MAX_MOVES: usize;
+    //const MAX_MOVES: usize;
     const STARTPOS: &'static str;
 
     fn stm(&self) -> usize;
@@ -24,13 +24,13 @@ pub trait GameRep: Clone + Default {
 
     fn gen_legal_moves(&self) -> MoveList<Self::Move>;
 
-    fn set_policies(&self, policy: &Self::PolicyNet, moves: &mut MoveList<Self::Move>);
+    fn set_policies(&self, policy: &Self::Policy, moves: &mut MoveList<Self::Move>);
 
-    fn get_value(&self, value: &Self::ValueNet) -> f32;
+    fn get_value(&self, value: &Self::Value) -> f32;
 
     fn from_fen(fen: &str) -> Self;
 
-    fn conv_mov_to_str(&self, mov: Self::Move) -> &str;
+    fn conv_mov_to_str(&self, mov: Self::Move) -> String;
 
-    fn perft(&mut self, depth: usize) -> u64;
+    fn perft(&self, depth: usize) -> u64;
 }

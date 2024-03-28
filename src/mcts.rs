@@ -30,7 +30,7 @@ impl<T: GameRep> Node<T> {
         }
     }
 
-    fn expand(&mut self, pos: &T, policy: &T::PolicyNet) {
+    fn expand(&mut self, pos: &T, policy: &T::Policy) {
         self.moves = pos.gen_legal_moves();
         pos.set_policies(policy, &mut self.moves);
         self.left = self.moves.len();
@@ -45,8 +45,8 @@ pub struct Searcher<'a, T: GameRep> {
     root_position: T,
     tree: Vec<Node<T>>,
     selection: Vec<i32>,
-    policy: &'a T::PolicyNet,
-    value: &'a T::ValueNet,
+    policy: &'a T::Policy,
+    value: &'a T::Value,
     params: TunableParams,
 }
 
@@ -54,8 +54,8 @@ impl<'a, T: GameRep> Searcher<'a, T> {
     pub fn new(
         root_position: T,
         tree: Vec<Node<T>>,
-        policy: &'a T::PolicyNet,
-        value: &'a T::ValueNet,
+        policy: &'a T::Policy,
+        value: &'a T::Value,
         params: TunableParams,
     ) -> Self {
         Self {

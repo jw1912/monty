@@ -9,3 +9,6 @@ panic = 'abort'
 strip = true
 lto = true
 codegen-units = 1
+
+[dependencies]
+goober = { git = 'https://github.com/jw1912/goober.git' }

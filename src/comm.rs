@@ -2,50 +2,76 @@ use crate::{game::GameRep, mcts::{Limits, Node, Searcher}, params::TunableParams
 
 use std::time::Instant;
 
-pub trait UciLike {
+pub trait UciLike: Sized {
     type Game: GameRep;
     const NAME: &'static str;
     const NEWGAME: &'static str;
+    const OK: &'static str;
 
     fn options();
-}
 
-pub fn run<T: UciLike>(
-    policy: &<T::Game as GameRep>::PolicyNet,
-    value: &<T::Game as GameRep>::ValueNet,
-) {
-    let mut prevs = None;
-    let mut pos = T::Game::default();
-    let mut params = TunableParams::default();
-    let mut tree = Vec::new();
-    let mut report_moves = false;
+    fn run(
+        policy: &<Self::Game as GameRep>::Policy,
+        value: &<Self::Game as GameRep>::Value,
+    ) {
+        let mut prevs = None;
+        let mut pos = Self::Game::default();
+        let mut params = TunableParams::default();
+        let mut tree = Vec::new();
+        let mut report_moves = false;
 
-    loop {
-        let mut input = String::new();
-        let bytes_read = std::io::stdin().read_line(&mut input).unwrap();
+        loop {
+            let mut input = String::new();
+            let bytes_read = std::io::stdin().read_line(&mut input).unwrap();
 
-        if bytes_read == 0 {
-            break;
-        }
+            if bytes_read == 0 {
+                break;
+            }
 
-        let commands = input.split_whitespace().collect::<Vec<_>>();
+            let commands = input.split_whitespace().collect::<Vec<_>>();
 
-        let cmd = *commands.first().unwrap_or(&"oops");
-        match cmd {
-            "isready" => println!("readyok"),
-            "setoption" => setoption(&commands, &mut params, &mut report_moves),
-            "position" => position(commands, &mut pos, &mut prevs),
-            "go" => tree = go(&commands, tree, &pos, &params, report_moves, policy, value, &mut prevs),
-            "perft" => run_perft::<T::Game>(&commands, &pos),
-            "quit" => std::process::exit(0),
-            _ => {
-                if cmd == T::NAME {
-                    preamble::<T>();
-                } else if cmd == T::NEWGAME {
-                    prevs = None;
+            let cmd = *commands.first().unwrap_or(&"oops");
+            match cmd {
+                "isready" => println!("readyok"),
+                "setoption" => setoption(&commands, &mut params, &mut report_moves),
+                "position" => position(commands, &mut pos, &mut prevs),
+                "go" => tree = go(&commands, tree, &pos, &params, report_moves, policy, value, &mut prevs),
+                "perft" => run_perft::<Self::Game>(&commands, &pos),
+                "quit" => std::process::exit(0),
+                _ => {
+                    if cmd == Self::NAME {
+                        preamble::<Self>();
+                    } else if cmd == Self::NEWGAME {
+                        prevs = None;
+                    }
                 }
             }
         }
+    }
+
+    fn bench(depth: usize, policy: &<Self::Game as GameRep>::Policy, value: &<Self::Game as GameRep>::Value, params: &TunableParams) {
+        const FEN_STRING: &str = include_str!("../resources/fens.txt");
+
+        let mut total_nodes = 0;
+        let bench_fens = FEN_STRING.split('\n').collect::<Vec<&str>>();
+        let timer = Instant::now();
+
+        let limits = Limits {
+            max_time: None,
+            max_depth: depth,
+            max_nodes: 10_000_000,
+        };
+
+        for fen in bench_fens {
+            let pos = Self::Game::from_fen(fen);
+            let mut searcher = Searcher::new(pos, Vec::new(), policy, value, params.clone());
+            searcher.search(limits, false, false, &mut total_nodes, None);
+        }
+
+        println!(
+            "Bench: {total_nodes} nodes {:.0} nps",
+            total_nodes as f32 / timer.elapsed().as_secs_f32()
+        );
     }
 }
 
@@ -55,7 +81,7 @@ fn preamble<T: UciLike>() {
     println!("option name report_moves type button");
     T::options();
     TunableParams::info();
-    println!("uciok");
+    println!("{}", T::OK);
 }
 
 fn setoption(commands: &[&str], params: &mut TunableParams, report_moves: &mut bool) {
@@ -125,8 +151,8 @@ fn go<T: GameRep>(
     pos: &T,
     params: &TunableParams,
     report_moves: bool,
-    policy: &T::PolicyNet,
-    value: &T::ValueNet,
+    policy: &T::Policy,
+    value: &T::Value,
     prevs: &mut Option<(T::Move, T::Move)>,
 ) -> Vec<Node<T>> {
     let mut max_nodes = 10_000_000;
@@ -212,7 +238,7 @@ fn go<T: GameRep>(
 
 fn run_perft<T: GameRep>(commands: &[&str], pos: &T) {
     let depth = commands[1].parse().unwrap();
-    let mut root_pos = pos.clone();
+    let root_pos = pos.clone();
     let now = Instant::now();
     let count = root_pos.perft(depth);
     let time = now.elapsed().as_micros();

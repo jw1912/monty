@@ -1,5 +1,9 @@
-pub mod comm;
-pub mod game;
-pub mod mcts;
-pub mod moves;
-pub mod params;
+pub mod chess;
+mod comm;
+mod game;
+mod mcts;
+mod moves;
+mod params;
+
+pub use comm::UciLike;
+pub use params::TunableParams;
