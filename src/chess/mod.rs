@@ -69,8 +69,6 @@ impl Chess {
 
 impl GameRep for Chess {
     type Move = Move;
-    type Policy = PolicyNetwork;
-    type Value = ValueNetwork;
 
     const STARTPOS: &'static str = STARTPOS;
 
@@ -111,20 +109,20 @@ impl GameRep for Chess {
         self.stm()
     }
 
-    fn get_value(&self, _: &Self::Value) -> f32 {
+    fn get_value(&self) -> f32 {
         let accs = self.board.get_accs();
         let qs = quiesce(&self.board, &self.castling, &accs, -30_000, 30_000);
         1.0 / (1.0 + (-(qs as f32) / (400.0)).exp())
     }
 
-    fn set_policies(&self, policy: &Self::Policy, moves: &mut MoveList<Move>) {
+    fn set_policies(&self, moves: &mut MoveList<Move>) {
         let mut total = 0.0;
         let mut max = -1000.0;
         let mut floats = [0.0; 256];
         let feats = self.board.get_features();
 
         for (i, mov) in moves.iter_mut().enumerate() {
-            floats[i] = PolicyNetwork::get(mov, &self.board, policy, &feats);
+            floats[i] = PolicyNetwork::get(mov, &self.board, &POLICY_NETWORK, &feats);
             if floats[i] > max {
                 max = floats[i];
             }

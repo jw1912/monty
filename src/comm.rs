@@ -15,7 +15,7 @@ pub trait UciLike: Sized {
 
     fn options();
 
-    fn run(policy: &<Self::Game as GameRep>::Policy, value: &<Self::Game as GameRep>::Value) {
+    fn run() {
         let mut prevs = None;
         let mut pos = Self::Game::default();
         let mut params = TunableParams::default();
@@ -44,14 +44,12 @@ pub trait UciLike: Sized {
                         &pos,
                         &params,
                         report_moves,
-                        policy,
-                        value,
                         &mut prevs,
                     )
                 }
                 "perft" => run_perft::<Self::Game>(&commands, &pos),
                 "quit" => std::process::exit(0),
-                "eval" => println!("value: {}%", 100.0 * pos.get_value(value)),
+                "eval" => println!("value: {}%", 100.0 * pos.get_value()),
                 _ => {
                     if cmd == Self::NAME {
                         preamble::<Self>();
@@ -65,8 +63,6 @@ pub trait UciLike: Sized {
 
     fn bench(
         depth: usize,
-        policy: &<Self::Game as GameRep>::Policy,
-        value: &<Self::Game as GameRep>::Value,
         params: &TunableParams,
     ) {
         let mut total_nodes = 0;
@@ -81,7 +77,7 @@ pub trait UciLike: Sized {
 
         for fen in bench_fens {
             let pos = Self::Game::from_fen(fen);
-            let mut searcher = Searcher::new(pos, Vec::new(), policy, value, params.clone());
+            let mut searcher = Searcher::new(pos, Vec::new(), params.clone());
             searcher.search(limits, false, false, &mut total_nodes, None);
         }
 
@@ -168,8 +164,6 @@ fn go<T: GameRep>(
     pos: &T,
     params: &TunableParams,
     report_moves: bool,
-    policy: &T::Policy,
-    value: &T::Value,
     prevs: &mut Option<(T::Move, T::Move)>,
 ) -> Vec<Node<T>> {
     let mut max_nodes = 10_000_000;
@@ -230,7 +224,7 @@ fn go<T: GameRep>(
         *t = t.saturating_sub(5);
     }
 
-    let mut searcher = Searcher::new(pos.clone(), tree, policy, value, params.clone());
+    let mut searcher = Searcher::new(pos.clone(), tree, params.clone());
 
     let limits = Limits {
         max_time: time,

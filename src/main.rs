@@ -15,20 +15,20 @@ fn main() {
     #[cfg(not(feature = "ataxx"))]
     {
         if let Some("bench") = arg1.as_deref() {
-            chess::Uci::bench(5, &chess::POLICY_NETWORK, &chess::NNUE, &params);
+            chess::Uci::bench(5, &params);
             return;
         }
 
-        chess::Uci::run(&chess::POLICY_NETWORK, &chess::NNUE);
+        chess::Uci::run();
     }
 
     #[cfg(feature = "ataxx")]
     {
         if let Some("bench") = arg1.as_deref() {
-            ataxx::Uai::bench(5, &(), &(), &params);
+            ataxx::Uai::bench(5, &params);
             return;
         }
 
-        ataxx::Uai::run(&(), &());
+        ataxx::Uai::run();
     }
 }

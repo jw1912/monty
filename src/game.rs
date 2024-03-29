@@ -10,8 +10,6 @@ pub enum GameState {
 }
 
 pub trait GameRep: Clone + Default + Send + Sync {
-    type Policy: Send + Sync;
-    type Value: Send + Sync;
     type Move: MoveType;
     const STARTPOS: &'static str;
 
@@ -26,9 +24,9 @@ pub trait GameRep: Clone + Default + Send + Sync {
 
     fn gen_legal_moves(&self) -> MoveList<Self::Move>;
 
-    fn set_policies(&self, policy: &Self::Policy, moves: &mut MoveList<Self::Move>);
+    fn set_policies(&self, moves: &mut MoveList<Self::Move>);
 
-    fn get_value(&self, value: &Self::Value) -> f32;
+    fn get_value(&self) -> f32;
 
     fn from_fen(fen: &str) -> Self;
 

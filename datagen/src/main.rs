@@ -8,15 +8,11 @@ fn main() {
     datagen::run_datagen::<monty::chess::Chess>(
         1_000,
         threads,
-        &monty::chess::POLICY_NETWORK,
-        &monty::chess::NNUE,
     );
 
     #[cfg(feature = "ataxx")]
     datagen::run_datagen::<monty::ataxx::Ataxx>(
         1_000,
         threads,
-        &(),
-        &(),
     );
 }

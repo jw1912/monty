@@ -34,8 +34,6 @@ impl Ataxx {
 impl GameRep for Ataxx {
     const STARTPOS: &'static str = STARTPOS;
     type Move = Move;
-    type Policy = ();
-    type Value = ();
 
     fn stm(&self) -> usize {
         self.board.stm()
@@ -61,13 +59,13 @@ impl GameRep for Ataxx {
         self.board.movegen()
     }
 
-    fn get_value(&self, _: &Self::Value) -> f32 {
+    fn get_value(&self) -> f32 {
         let out = value::ValueNetwork::eval(&self.board);
 
         1.0 / (1.0 + (-out as f32 / 400.0).exp())
     }
 
-    fn set_policies(&self, _: &Self::Policy, moves: &mut crate::MoveList<Self::Move>) {
+    fn set_policies(&self, moves: &mut crate::MoveList<Self::Move>) {
         let p = 1.0 / moves.len() as f32;
 
         for mov in moves.iter_mut() {
