@@ -112,7 +112,7 @@ fn setoption(commands: &[&str], params: &mut TunableParams, report_moves: &mut b
             return;
         }
 
-        (*x, y.parse::<i32>().unwrap())
+        (*x, y.parse::<i32>().unwrap_or(0))
     } else {
         return;
     };
@@ -209,10 +209,10 @@ fn go<T: GameRep>(
     let mut time = None;
 
     // `go wtime <wtime> btime <btime> winc <winc> binc <binc>``
-    if let Some(t) = times[pos.stm()] {
+    if let Some(t) = times[pos.tm_stm()] {
         let mut base = t / movestogo.max(1);
 
-        if let Some(i) = incs[pos.stm()] {
+        if let Some(i) = incs[pos.tm_stm()] {
             base += i * 3 / 4;
         }
 

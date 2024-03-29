@@ -106,6 +106,10 @@ impl GameRep for Chess {
         self.board.stm()
     }
 
+    fn tm_stm(&self) -> usize {
+        self.stm()
+    }
+
     fn get_value(&self, _: &Self::Value) -> f32 {
         let accs = self.board.get_accs();
         let qs = quiesce(&self.board, &self.castling, &accs, -30_000, 30_000);

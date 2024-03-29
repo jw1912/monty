@@ -13,10 +13,12 @@ pub trait GameRep: Clone + Default + Send + Sync {
     type Policy: Send + Sync;
     type Value: Send + Sync;
     type Move: MoveType;
-    //const MAX_MOVES: usize;
     const STARTPOS: &'static str;
 
     fn stm(&self) -> usize;
+
+    /// For games where black goes first.
+    fn tm_stm(&self) -> usize;
 
     fn game_state(&self) -> GameState;
 
