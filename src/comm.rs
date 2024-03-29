@@ -11,6 +11,7 @@ pub trait UciLike: Sized {
     const NAME: &'static str;
     const NEWGAME: &'static str;
     const OK: &'static str;
+    const FEN_STRING: &'static str;
 
     fn options();
 
@@ -67,10 +68,8 @@ pub trait UciLike: Sized {
         value: &<Self::Game as GameRep>::Value,
         params: &TunableParams,
     ) {
-        const FEN_STRING: &str = include_str!("../resources/fens.txt");
-
         let mut total_nodes = 0;
-        let bench_fens = FEN_STRING.split('\n').collect::<Vec<&str>>();
+        let bench_fens = Self::FEN_STRING.split('\n').collect::<Vec<&str>>();
         let timer = Instant::now();
 
         let limits = Limits {

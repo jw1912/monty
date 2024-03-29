@@ -28,6 +28,7 @@ impl UciLike for Uci {
     const NAME: &'static str = "uci";
     const NEWGAME: &'static str = "ucinewgame";
     const OK: &'static str = "uciok";
+    const FEN_STRING: &'static str = include_str!("../../resources/chess-fens.txt");
 
     type Game = Chess;
 

@@ -11,10 +11,10 @@ const STARTPOS: &str = "x5o/7/7/7/7/7/o5x x 0 1";
 pub struct Uai;
 impl UciLike for Uai {
     type Game = Ataxx;
-
     const NAME: &'static str = "uai";
     const NEWGAME: &'static str = "uainewgame";
     const OK: &'static str = "uaiok";
+    const FEN_STRING: &'static str = include_str!("../../resources/ataxx-fens.txt");
 
     fn options() {}
 }

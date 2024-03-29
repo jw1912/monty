@@ -1,24 +1,34 @@
-use monty::{ataxx, UciLike};
+use monty::{UciLike, TunableParams};
+
+#[cfg(feature = "ataxx")]
+use monty::ataxx;
 
 #[cfg(not(feature = "ataxx"))]
-use monty::{chess, TunableParams};
+use monty::chess;
 
 fn main() {
+    let mut args = std::env::args();
+    let arg1 = args.nth(1);
+
+    let params = TunableParams::default();
+
     #[cfg(not(feature = "ataxx"))]
     {
-        let mut args = std::env::args();
-        let params = TunableParams::default();
-
-        #[cfg(not(feature = "ataxx"))]
-        match args.nth(1).as_deref() {
-            Some("bench") => chess::Uci::bench(5, &chess::POLICY_NETWORK, &chess::NNUE, &params),
-            Some("ataxx") => ataxx::Uai::run(&(), &()),
-            Some(_) => println!("unknown mode!"),
-            None => chess::Uci::run(&chess::POLICY_NETWORK, &chess::NNUE),
+        if let Some("bench") = arg1.as_deref() {
+            chess::Uci::bench(5, &chess::POLICY_NETWORK, &chess::NNUE, &params);
+            return;
         }
+
+        chess::Uci::run(&chess::POLICY_NETWORK, &chess::NNUE);
     }
 
-
     #[cfg(feature = "ataxx")]
-    ataxx::Uai::run(&(), &())
+    {
+        if let Some("bench") = arg1.as_deref() {
+            ataxx::Uai::bench(5, &(), &(), &params);
+            return;
+        }
+
+        ataxx::Uai::run(&(), &());
+    }
 }
