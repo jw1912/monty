@@ -62,26 +62,7 @@ impl GameRep for Ataxx {
     }
 
     fn get_value(&self, _: &Self::Value) -> f32 {
-        let mut acc = value::Accumulator::default();
-
-        let mut boys = self.board.boys();
-        let mut opps = self.board.opps();
-
-        while boys > 0 {
-            let sq = boys.trailing_zeros() as usize;
-            boys &= boys - 1;
-
-            acc.add(sq);
-        }
-
-        while opps > 0 {
-            let sq = opps.trailing_zeros() as usize;
-            opps &= opps - 1;
-
-            acc.add(49 + sq);
-        }
-
-        let out = value::ValueNetwork::out(&acc);
+        let out = value::ValueNetwork::eval(&self.board);
 
         1.0 / (1.0 + (-out as f32 / 400.0).exp())
     }
