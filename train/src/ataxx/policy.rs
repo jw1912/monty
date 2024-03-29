@@ -45,7 +45,7 @@ pub fn train_policy(threads: usize, data_path: &str) {
             lr *= 0.1;
         }
 
-        policy.write_to_bin(format!("resources/ataxx-policy-{iteration}.bin").as_str());
+        policy.write_to_bin(format!("checkpoints/ataxx-policy-{iteration}.bin").as_str());
     }
 }
 
@@ -160,8 +160,8 @@ fn update_single_grad(
 
     for mov in &pos.moves[..pos.num] {
         let visits = mov.visits;
-        let from = usize::from(mov.from);
-        let to = 50 + usize::from(mov.to);
+        let from = usize::from(mov.from.min(49));
+        let to = 50 + usize::from(mov.to.min(48));
 
         let from_out = policy.subnets[from].out_with_layers(&feats);
         let to_out = policy.subnets[to].out_with_layers(&feats);
@@ -183,8 +183,8 @@ fn update_single_grad(
 
     for (mov, score, from_out, to_out) in policies {
         let visits = mov.visits;
-        let from = usize::from(mov.from);
-        let to = 50 + usize::from(mov.to);
+        let from = usize::from(mov.from.min(49));
+        let to = 50 + usize::from(mov.to.min(48));
 
         let ratio = score / total;
 

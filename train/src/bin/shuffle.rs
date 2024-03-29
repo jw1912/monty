@@ -2,7 +2,7 @@ use datagen::{write, Rand};
 
 use std::{fs::File, io::BufWriter, time::Instant};
 
-const SIZE: usize = 32;
+const SIZE: usize = 512;
 
 fn data_from_bytes_with_lifetime<T>(raw_bytes: &mut [u8]) -> &mut [T] {
     let src_size = std::mem::size_of_val(raw_bytes);

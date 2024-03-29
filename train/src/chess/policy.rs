@@ -45,7 +45,7 @@ pub fn train_policy(threads: usize, data_path: &str) {
             lr *= 0.1;
         }
         println!("{:?}", policy.hce);
-        policy.write_to_bin(format!("resources/chess-policy-{iteration}.bin").as_str());
+        policy.write_to_bin(format!("checkpoints/chess-policy-{iteration}.bin").as_str());
     }
 }
 
