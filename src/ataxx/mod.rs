@@ -1,11 +1,12 @@
 mod board;
 mod moves;
+mod policy;
 mod util;
 mod value;
 
 use crate::{GameRep, MoveType, UciLike};
 
-pub use self::{board::Board, moves::Move};
+pub use self::{board::Board, moves::Move, policy::{PolicyNetwork, SubNet, POLICY_NETWORK}};
 
 const STARTPOS: &str = "x5o/7/7/7/7/7/o5x x 0 1";
 
@@ -66,10 +67,25 @@ impl GameRep for Ataxx {
     }
 
     fn set_policies(&self, moves: &mut crate::MoveList<Self::Move>) {
-        let p = 1.0 / moves.len() as f32;
+        let mut total = 0.0;
+        let mut max = -1000.0;
+        let mut floats = [0.0; 256];
+        let feats = self.board.get_features();
 
-        for mov in moves.iter_mut() {
-            mov.set_policy(p);
+        for (i, mov) in moves.iter_mut().enumerate() {
+            floats[i] = PolicyNetwork::get(mov, &feats);
+            if floats[i] > max {
+                max = floats[i];
+            }
+        }
+
+        for (i, _) in moves.iter_mut().enumerate() {
+            floats[i] = (floats[i] - max).exp();
+            total += floats[i];
+        }
+
+        for (i, mov) in moves.iter_mut().enumerate() {
+            mov.set_policy(floats[i] / total);
         }
     }
 

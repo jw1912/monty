@@ -29,7 +29,8 @@ impl PolicyFormat<Ataxx> for AtaxxPolicyData {
             from: mov.from() as u8,
             to: mov.to() as u8,
             visits,
-        }
+        };
+        self.num += 1;
     }
 
     fn set_result(&mut self, result: f32) {

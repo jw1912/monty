@@ -1,5 +1,7 @@
 use crate::{GameState, MoveList};
 
+use goober::SparseVector;
+
 use super::{
     moves::Move,
     util::{Bitboard, Side}, STARTPOS,
@@ -160,6 +162,27 @@ impl Board {
         }
 
         moves
+    }
+
+    pub fn get_features(&self) -> SparseVector {
+        let mut feats = SparseVector::with_capacity(49);
+
+        let mut boys = self.boys();
+        let mut opps = self.opps();
+
+        while boys > 0 {
+            let sq = boys.trailing_zeros() as usize;
+            boys &= boys - 1;
+            feats.push(sq);
+        }
+
+        while opps > 0 {
+            let sq = opps.trailing_zeros() as usize;
+            opps &= opps - 1;
+            feats.push(49 + sq);
+        }
+
+        feats
     }
 
     #[cfg(not(feature = "datagen"))]
