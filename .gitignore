@@ -2,3 +2,5 @@
 *-policy-*
 *.data
 *.exe
+checkpoints
+data

@@ -1,6 +1,7 @@
 mod board;
 mod moves;
 mod util;
+mod value;
 
 use crate::{GameRep, MoveType, UciLike};
 
@@ -61,9 +62,28 @@ impl GameRep for Ataxx {
     }
 
     fn get_value(&self, _: &Self::Value) -> f32 {
-        let mat = self.board.material();
+        let mut acc = value::Accumulator::default();
 
-        1.0 / (1.0 + (-mat as f32 / 4.0).exp())
+        let mut boys = self.board.boys();
+        let mut opps = self.board.opps();
+
+        while boys > 0 {
+            let sq = boys.trailing_zeros() as usize;
+            boys &= boys - 1;
+
+            acc.add(sq);
+        }
+
+        while opps > 0 {
+            let sq = opps.trailing_zeros() as usize;
+            opps &= opps - 1;
+
+            acc.add(49 + sq);
+        }
+
+        let out = value::ValueNetwork::out(&acc);
+
+        1.0 / (1.0 + (-out as f32 / 400.0).exp())
     }
 
     fn set_policies(&self, _: &Self::Policy, moves: &mut crate::MoveList<Self::Move>) {

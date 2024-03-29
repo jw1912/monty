@@ -51,6 +51,7 @@ pub trait UciLike: Sized {
                 }
                 "perft" => run_perft::<Self::Game>(&commands, &pos),
                 "quit" => std::process::exit(0),
+                "eval" => println!("value: {}%", 100.0 * pos.get_value(value)),
                 _ => {
                     if cmd == Self::NAME {
                         preamble::<Self>();
