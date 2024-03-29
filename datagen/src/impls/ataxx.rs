@@ -7,7 +7,8 @@ use monty::{
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct AtaxxMoveInfo {
-    pub mov: Move,
+    pub from: u8,
+    pub to: u8,
     pub visits: i16,
 }
 
@@ -24,7 +25,11 @@ impl PolicyFormat<Ataxx> for AtaxxPolicyData {
     const MAX_MOVES: usize = 116;
 
     fn push(&mut self, mov: Move, visits: i16) {
-        self.moves[self.num] = AtaxxMoveInfo { mov, visits }
+        self.moves[self.num] = AtaxxMoveInfo {
+            from: mov.from() as u8,
+            to: mov.to() as u8,
+            visits,
+        }
     }
 
     fn set_result(&mut self, result: f32) {

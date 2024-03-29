@@ -30,7 +30,7 @@ pub fn train_value() {
 
     let settings = LocalSettings {
         threads: 4,
-        data_file_paths: vec!["ataxx-value001.data"],
+        data_file_paths: vec!["data/ataxx/ataxx-value002.data"],
         output_directory: "checkpoints",
     };
 
