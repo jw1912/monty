@@ -278,8 +278,8 @@ impl<T: GameRep> Searcher<T> {
         }
     }
 
-    fn recurse_find(&self, start: i32, board: &T, depth: u8) -> i32 {
-        if self.root_position.is_same(board) {
+    fn recurse_find(&self, start: i32, this_board: &T, board: &T, depth: u8) -> i32 {
+        if this_board.is_same(board) {
             return start;
         }
 
@@ -290,9 +290,11 @@ impl<T: GameRep> Searcher<T> {
         let node = &self.tree[start as usize];
 
         for child_mov in node.moves.iter() {
+            let mut child_board = this_board.clone();
+            child_board.make_move(*child_mov);
             let child = child_mov.ptr();
 
-            let found = self.recurse_find(child, board, depth - 1);
+            let found = self.recurse_find(child, &child_board, board, depth - 1);
 
             if found != -1 {
                 return found;
@@ -315,13 +317,15 @@ impl<T: GameRep> Searcher<T> {
         // attempt to reuse the previous tree
         if !self.tree.is_empty() {
             if let Some(board) = prev_board {
-                let ptr = self.recurse_find(0, board, 2);
+                println!("info string searching for subtree");
+                let ptr = self.recurse_find(0, board, &self.root_position, 2);
                 if ptr == -1 || self.tree[ptr as usize].visits == 1 {
                     self.tree.clear();
                 } else {
                     let mut subtree = Vec::new();
                     self.construct_subtree(ptr, &mut subtree);
                     self.tree = subtree;
+                    println!("info string found subtree of size {} nodes", self.tree.len());
                 }
             } else {
                 self.tree.clear();
