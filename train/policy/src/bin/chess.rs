@@ -11,8 +11,13 @@ const BATCH_SIZE: usize = 16_384;
 const EPOCHS: usize = 10;
 const LR_DROP: usize = 7;
 
-pub fn train_policy(threads: usize, data_path: &str) {
-    let file = File::open(data_path).unwrap();
+fn main() {
+    let mut args = std::env::args();
+    args.next();
+    let threads = args.next().unwrap().parse().unwrap();
+    let data_path = args.next().unwrap();
+
+    let file = File::open(data_path.as_str()).unwrap();
 
     let mut policy = PolicyNetwork::boxed_and_zeroed();
     let mut rng = Rand::with_seed();
@@ -38,7 +43,7 @@ pub fn train_policy(threads: usize, data_path: &str) {
             lr,
             &mut momentum,
             &mut velocity,
-            data_path,
+            data_path.as_str(),
         );
 
         if iteration % LR_DROP == 0 {
