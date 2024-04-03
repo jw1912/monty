@@ -11,7 +11,8 @@ use std::{
 const BATCH_SIZE: usize = 16_384;
 
 pub fn train<T: TrainablePolicy>(threads: usize, data_path: String, epochs: usize, lr_drop: usize)
-where for <'b> &'b T: Send
+where
+    for<'b> &'b T: Send,
 {
     let file = File::open(data_path.as_str()).unwrap();
     let mut policy = T::rand_init();
@@ -52,7 +53,9 @@ fn train_epoch<T: TrainablePolicy>(
     momentum: &mut T,
     velocity: &mut T,
     path: &str,
-) where for <'b> &'b T: Send {
+) where
+    for<'b> &'b T: Send,
+{
     let mut running_error = 0.0;
     let mut num = 0;
 
@@ -95,7 +98,9 @@ fn gradient_batch<T: TrainablePolicy>(
     grad: &mut T,
     batch: &[T::Data],
 ) -> f32
-where for <'b> &'b T: Send {
+where
+    for<'b> &'b T: Send,
+{
     let size = (batch.len() / threads).max(1);
     let mut errors = vec![0.0; threads];
 
@@ -133,12 +138,7 @@ pub trait TrainablePolicy: Send + Sized {
         velocity: &mut Self,
     );
 
-    fn update_single_grad(
-        pos: &Self::Data,
-        policy: &Self,
-        grad: &mut Self,
-        error: &mut f32,
-    );
+    fn update_single_grad(pos: &Self::Data, policy: &Self, grad: &mut Self, error: &mut f32);
 
     fn rand_init() -> Box<Self>;
 

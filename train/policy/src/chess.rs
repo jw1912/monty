@@ -39,12 +39,7 @@ impl TrainablePolicy for PolicyNetwork {
         }
     }
 
-    fn update_single_grad(
-        pos: &Self::Data,
-        policy: &Self,
-        grad: &mut Self,
-        error: &mut f32,
-    ) {
+    fn update_single_grad(pos: &Self::Data, policy: &Self, grad: &mut Self, error: &mut f32) {
         let board = pos.board;
 
         let feats = board.get_features();

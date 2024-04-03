@@ -7,12 +7,7 @@ use crate::TrainablePolicy;
 impl TrainablePolicy for PolicyNetwork {
     type Data = AtaxxPolicyData;
 
-    fn update_single_grad(
-        pos: &Self::Data,
-        policy: &Self,
-        grad: &mut Self,
-        error: &mut f32,
-    ) {
+    fn update_single_grad(pos: &Self::Data, policy: &Self, grad: &mut Self, error: &mut f32) {
         if pos.num == 1 && pos.moves[0].from == 63 {
             return;
         }

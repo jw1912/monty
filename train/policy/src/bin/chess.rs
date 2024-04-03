@@ -11,5 +11,3 @@ fn main() {
 
     policy::train::<PolicyNetwork>(threads, data_path, EPOCHS, LR_DROP);
 }
-
-
