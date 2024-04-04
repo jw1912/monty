@@ -43,7 +43,7 @@ impl Tree {
         assert_ne!(new, -1);
 
         self.used += 1;
-        self.empty = self[new].first_child;
+        self.empty = self[self.empty].first_child;
         self[new] = node;
 
         new
@@ -86,6 +86,7 @@ impl Tree {
         let end = self.cap() as i32 - 1;
 
         for i in 0..end {
+            self[i].visits = 0;
             self[i].mark = false;
             self[i].first_child = i + 1;
         }
