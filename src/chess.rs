@@ -72,6 +72,8 @@ impl GameRep for Chess {
 
     const STARTPOS: &'static str = STARTPOS;
 
+    const MAX_MOVES: usize = 512;
+
     fn is_same(&self, other: &Self) -> bool {
         self.board == other.board
     }

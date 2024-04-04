@@ -57,7 +57,10 @@ impl<T: GameRep> Searcher<T> {
         let mut depth = 0;
         let mut cumulative_depth = 0;
 
-        while nodes < limits.max_nodes {
+        println!("info string capacity {} nodes", self.tree.cap());
+
+        // search until a further iteration may overflow the tree
+        while self.tree.remaining() > T::MAX_MOVES {
             nodes += 1;
 
             // start from the root
@@ -79,6 +82,11 @@ impl<T: GameRep> Searcher<T> {
 
             // step 4: backpropogate the result to the root
             self.backprop(result);
+
+            // check if hit node limit
+            if nodes >= limits.max_nodes {
+                break;
+            }
 
             // check for timeup
             if let Some(time) = limits.max_time {

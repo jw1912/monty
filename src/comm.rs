@@ -46,12 +46,33 @@ pub trait UciLike: Sized {
                 "quit" => std::process::exit(0),
                 "eval" => println!("value: {}%", 100.0 * pos.get_value()),
                 "policy" => {
+                    let f = pos.get_policy_feats();
+                    let mut max = f32::NEG_INFINITY;
+                    let mut moves = Vec::new();
+
                     pos.map_legal_moves(|mov| {
                         let s = pos.conv_mov_to_str(mov);
-                        let f = pos.get_policy_feats();
                         let p = pos.get_policy(mov, &f);
-                        println!("{s} -> {:.2}%", p * 100.0);
+
+                        if p > max {
+                            max = p;
+                        }
+
+                        moves.push((s, p));
                     });
+
+                    let mut total = 0.0;
+
+                    for (_, p) in &mut moves {
+                        *p = (*p - max).exp();
+                        total += *p;
+                    }
+
+                    moves.sort_by_key(|(_, p)| (p * 1000.0) as u32);
+
+                    for (s, p) in moves {
+                        println!("{s} -> {:.2}%", p / total * 100.0);
+                    }
                 }
                 "d" => println!("{pos}"),
                 _ => {

@@ -50,8 +50,11 @@ impl Tree {
     }
 
     pub fn delete(&mut self, ptr: i32) {
+        self[ptr].visits = 0;
         self[ptr].first_child = self.empty;
         self.empty = ptr;
+        self.used -= 1;
+        assert!(self.used < self.cap());
     }
 
     pub fn root_node(&self) -> i32 {
@@ -64,6 +67,10 @@ impl Tree {
 
     pub fn len(&self) -> usize {
         self.used
+    }
+
+    pub fn remaining(&self) -> usize {
+        self.cap() - self.len()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -223,7 +230,7 @@ impl Tree {
         let mark = self.mark;
 
         for i in 0..self.cap() as i32 {
-            if self[i].mark != mark {
+            if self[i].visits > 0 && self[i].mark != mark {
                 self.delete(i);
             }
         }
