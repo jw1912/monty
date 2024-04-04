@@ -1,8 +1,11 @@
 use crate::game::{GameRep, GameState};
 
-#[derive(Default)]
 pub struct Tree<T: GameRep> {
     tree: Vec<Node<T>>,
+    root: i32,
+    empty: i32,
+    used: usize,
+    mark: bool,
 }
 
 impl<T: GameRep> std::ops::Index<i32> for Tree<T> {
@@ -20,9 +23,73 @@ impl<T: GameRep> std::ops::IndexMut<i32> for Tree<T> {
 }
 
 impl<T: GameRep> Tree<T> {
+    pub fn new(cap: usize) -> Self {
+        let mut tree = Self {
+            tree: vec![Node::default(); cap],
+            root: -1,
+            empty: 0,
+            used: 0,
+            mark: false,
+        };
+
+        tree.clear();
+
+        tree
+    }
+
     pub fn push(&mut self, node: Node<T>) -> i32 {
-        self.tree.push(node);
-        self.tree.len() as i32 - 1
+        let new = self.empty;
+
+        assert_ne!(new, -1);
+
+        self.used += 1;
+        self.empty = self[new].first_child;
+        self[new] = node;
+
+        new
+    }
+
+    pub fn delete(&mut self, ptr: i32) {
+        self[ptr].first_child = self.empty;
+        self.empty = ptr;
+    }
+
+    pub fn root_node(&self) -> i32 {
+        self.root
+    }
+
+    pub fn cap(&self) -> usize {
+        self.tree.len()
+    }
+
+    pub fn len(&self) -> usize {
+        self.used
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn clear(&mut self) {
+        self.root = -1;
+        self.empty = 0;
+        self.used = 0;
+        self.mark = false;
+
+        let end = self.cap() as i32 - 1;
+
+        for i in 0..end {
+            self[i].mark = false;
+            self[i].first_child = i + 1;
+        }
+
+        self[end].first_child = -1;
+    }
+
+    pub fn make_root_node(&mut self, node: i32) {
+        self.root = node;
+        self.mark = self[node].mark;
+        self[node].state = GameState::Ongoing;
     }
 
     pub fn map_children<F: FnMut(i32, &Node<T>)>(&self, ptr: i32, mut f: F) {
@@ -55,6 +122,7 @@ impl<T: GameRep> Tree<T> {
         pos.map_legal_moves(|mov| {
             let node = Node {
                 mov,
+                mark: self.mark,
                 state: GameState::Ongoing,
                 policy: pos.get_policy(mov, &feats),
                 visits: 0,
@@ -91,16 +159,14 @@ impl<T: GameRep> Tree<T> {
         if let Some(board) = prev_board {
             println!("info string searching for subtree");
 
-            let ptr = self.recurse_find(0, board, root, 2);
+            let root = self.recurse_find(self.root, board, root, 2);
 
-            if ptr == -1 || !self[ptr].has_children() {
+            if root == -1 || !self[root].has_children() {
                 self.clear();
             } else {
-                let mut subtree = Tree::default();
-                let root = self.construct_subtree(ptr, &mut subtree);
-
-                *self = subtree;
-                self[root].make_root();
+                self.mark_subtree(root);
+                self.make_root_node(root);
+                self.clear_unmarked();
 
                 println!(
                     "info string found subtree of size {} nodes",
@@ -143,21 +209,24 @@ impl<T: GameRep> Tree<T> {
         -1
     }
 
-    fn construct_subtree(&self, node_ptr: i32, subtree: &mut Tree<T>) -> i32 {
-        let node = &self.tree[node_ptr as usize];
-        let new_ptr = subtree.push(node.clone());
+    fn mark_subtree(&mut self, ptr: i32) {
+        self[ptr].mark = !self[ptr].mark;
 
-        let mut ptr = -1;
+        let mut child = self[ptr].first_child;
+        while child != -1 {
+            self.mark_subtree(child);
+            child = self[child].next_sibling;
+        }
+    }
 
-        self.map_children(node_ptr, |child_idx, _| {
-            let child_ptr = self.construct_subtree(child_idx, subtree);
-            subtree[child_ptr].next_sibling = ptr;
-            ptr = child_ptr;
-        });
+    fn clear_unmarked(&mut self) {
+        let mark = self.mark;
 
-        subtree[new_ptr].first_child = ptr;
-
-        new_ptr
+        for i in 0..self.cap() as i32 {
+            if self[i].mark != mark {
+                self.delete(i);
+            }
+        }
     }
 
     pub fn get_best_child(&self, ptr: i32) -> i32 {
@@ -175,23 +244,12 @@ impl<T: GameRep> Tree<T> {
 
         best_child
     }
-
-    pub fn len(&self) -> usize {
-        self.tree.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn clear(&mut self) {
-        self.tree.clear();
-    }
 }
 
 #[derive(Clone)]
 pub struct Node<T: GameRep> {
     mov: T::Move,
+    mark: bool,
     state: GameState,
     policy: f32,
     visits: i32,
@@ -204,6 +262,7 @@ impl<T: GameRep> Default for Node<T> {
     fn default() -> Self {
         Node {
             mov: T::Move::default(),
+            mark: false,
             state: GameState::Ongoing,
             policy: 0.0,
             visits: 0,
@@ -247,9 +306,5 @@ impl<T: GameRep> Node<T> {
     pub fn update(&mut self, visits: i32, result: f32) {
         self.visits += visits;
         self.wins += result;
-    }
-
-    pub fn make_root(&mut self) {
-        self.state = GameState::Ongoing;
     }
 }

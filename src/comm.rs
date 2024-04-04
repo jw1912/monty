@@ -18,7 +18,7 @@ pub trait UciLike: Sized {
         let mut prev = None;
         let mut pos = Self::Game::default();
         let mut params = MctsParams::default();
-        let mut tree = Tree::default();
+        let mut tree = Tree::new(1_000_000);
         let mut report_moves = false;
 
         loop {
@@ -79,7 +79,7 @@ pub trait UciLike: Sized {
 
         for fen in bench_fens {
             let pos = Self::Game::from_fen(fen);
-            let mut searcher = Searcher::new(pos, Tree::default(), params.clone());
+            let mut searcher = Searcher::new(pos, Tree::new(10_000_000), params.clone());
             searcher.search(limits, false, &mut total_nodes, &None);
         }
 

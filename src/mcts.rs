@@ -48,8 +48,8 @@ impl<T: GameRep> Searcher<T> {
         // we failed to reuse a tree, push the root node to
         // the tree and expand it
         if self.tree.is_empty() {
-            self.tree.push(Node::default());
-            self.tree.expand(0, &self.root_position);
+            let node = self.tree.push(Node::default());
+            self.tree.expand(node, &self.root_position);
         }
 
         let mut nodes = 0;
@@ -107,17 +107,17 @@ impl<T: GameRep> Searcher<T> {
             self.search_report(depth, &timer, nodes);
         }
 
-        let best_idx = self.tree.get_best_child(0);
+        let best_idx = self.tree.get_best_child(self.tree.root_node());
         let best_child = &self.tree[best_idx];
         (best_child.mov(), best_child.q())
     }
 
     fn select_leaf(&mut self, pos: &mut T) {
-        self.selection.clear();
-        self.selection.push(0);
-
         // always start from the root
-        let mut node_ptr = 0;
+        let mut node_ptr = self.tree.root_node();
+
+        self.selection.clear();
+        self.selection.push(node_ptr);
 
         loop {
             let node = &self.tree[node_ptr];
@@ -239,7 +239,7 @@ impl<T: GameRep> Searcher<T> {
     }
 
     fn get_pv(&self, mut depth: usize) -> (Vec<T::Move>, f32) {
-        let mut idx = self.tree.get_best_child(0);
+        let mut idx = self.tree.get_best_child(self.tree.root_node());
         let score = self.tree[idx].q();
         let mut pv = Vec::new();
 
