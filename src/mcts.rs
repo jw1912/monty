@@ -57,8 +57,6 @@ impl<T: GameRep> Searcher<T> {
         let mut depth = 0;
         let mut cumulative_depth = 0;
 
-        println!("info string capacity {} nodes", self.tree.cap());
-
         // search until a further iteration may overflow the tree
         while self.tree.remaining() > T::MAX_MOVES {
             nodes += 1;

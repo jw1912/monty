@@ -98,10 +98,14 @@ pub trait UciLike: Sized {
             max_nodes: 1_000_000,
         };
 
+        let mut tree = Tree::new(1_000_000);
+
         for fen in bench_fens {
             let pos = Self::Game::from_fen(fen);
-            let mut searcher = Searcher::new(pos, Tree::new(1_000_000), params.clone());
+            let mut searcher = Searcher::new(pos, tree, params.clone());
             searcher.search(limits, false, &mut total_nodes, &None);
+            tree = searcher.tree_and_board().0;
+            tree.clear();
         }
 
         println!(
