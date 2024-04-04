@@ -1,28 +1,28 @@
 use crate::game::{GameRep, GameState};
 
-pub struct Tree<T: GameRep> {
-    tree: Vec<Node<T>>,
+pub struct Tree {
+    tree: Vec<Node>,
     root: i32,
     empty: i32,
     used: usize,
     mark: bool,
 }
 
-impl<T: GameRep> std::ops::Index<i32> for Tree<T> {
-    type Output = Node<T>;
+impl std::ops::Index<i32> for Tree {
+    type Output = Node;
 
     fn index(&self, index: i32) -> &Self::Output {
         &self.tree[index as usize]
     }
 }
 
-impl<T: GameRep> std::ops::IndexMut<i32> for Tree<T> {
+impl std::ops::IndexMut<i32> for Tree {
     fn index_mut(&mut self, index: i32) -> &mut Self::Output {
         &mut self.tree[index as usize]
     }
 }
 
-impl<T: GameRep> Tree<T> {
+impl Tree {
     pub fn new(cap: usize) -> Self {
         let mut tree = Self {
             tree: vec![Node::default(); cap],
@@ -37,7 +37,7 @@ impl<T: GameRep> Tree<T> {
         tree
     }
 
-    pub fn push(&mut self, node: Node<T>) -> i32 {
+    pub fn push(&mut self, node: Node) -> i32 {
         let new = self.empty;
 
         assert_ne!(new, -1);
@@ -92,7 +92,7 @@ impl<T: GameRep> Tree<T> {
         self[node].state = GameState::Ongoing;
     }
 
-    pub fn map_children<F: FnMut(i32, &Node<T>)>(&self, ptr: i32, mut f: F) {
+    pub fn map_children<F: FnMut(i32, &Node)>(&self, ptr: i32, mut f: F) {
         let mut child_idx = self.tree[ptr as usize].first_child;
         while child_idx != -1 {
             let child = &self.tree[child_idx as usize];
@@ -103,7 +103,7 @@ impl<T: GameRep> Tree<T> {
         }
     }
 
-    pub fn map_children_mut<F: FnMut(i32, &mut Node<T>)>(&mut self, ptr: i32, mut f: F) {
+    pub fn map_children_mut<F: FnMut(i32, &mut Node)>(&mut self, ptr: i32, mut f: F) {
         let mut child_idx = self.tree[ptr as usize].first_child;
         while child_idx != -1 {
             let child = &mut self.tree[child_idx as usize];
@@ -114,14 +114,14 @@ impl<T: GameRep> Tree<T> {
         }
     }
 
-    pub fn expand(&mut self, ptr: i32, pos: &T) {
+    pub fn expand<T: GameRep>(&mut self, ptr: i32, pos: &T) {
         let feats = pos.get_policy_feats();
         let mut next_sibling = -1;
         let mut max = f32::NEG_INFINITY;
 
         pos.map_legal_moves(|mov| {
             let node = Node {
-                mov,
+                mov: mov.into(),
                 mark: self.mark,
                 state: GameState::Ongoing,
                 policy: pos.get_policy(mov, &feats),
@@ -151,7 +151,7 @@ impl<T: GameRep> Tree<T> {
         self.map_children_mut(ptr, |_, child| child.policy /= total);
     }
 
-    pub fn try_use_subtree(&mut self, root: &T, prev_board: &Option<T>) {
+    pub fn try_use_subtree<T: GameRep>(&mut self, root: &T, prev_board: &Option<T>) {
         if self.is_empty() {
             return;
         }
@@ -178,7 +178,7 @@ impl<T: GameRep> Tree<T> {
         }
     }
 
-    fn recurse_find(&self, start: i32, this_board: &T, board: &T, depth: u8) -> i32 {
+    fn recurse_find<T: GameRep>(&self, start: i32, this_board: &T, board: &T, depth: u8) -> i32 {
         if this_board.is_same(board) {
             return start;
         }
@@ -195,7 +195,7 @@ impl<T: GameRep> Tree<T> {
             let mut child_board = this_board.clone();
             let child = &self.tree[child_idx as usize];
 
-            child_board.make_move(child.mov());
+            child_board.make_move(T::Move::from(child.mov()));
 
             let found = self.recurse_find(child_idx, &child_board, board, depth - 1);
 
@@ -247,8 +247,8 @@ impl<T: GameRep> Tree<T> {
 }
 
 #[derive(Clone)]
-pub struct Node<T: GameRep> {
-    mov: T::Move,
+pub struct Node {
+    mov: u16,
     mark: bool,
     state: GameState,
     policy: f32,
@@ -258,10 +258,10 @@ pub struct Node<T: GameRep> {
     next_sibling: i32,
 }
 
-impl<T: GameRep> Default for Node<T> {
+impl Default for Node {
     fn default() -> Self {
         Node {
-            mov: T::Move::default(),
+            mov: 0,
             mark: false,
             state: GameState::Ongoing,
             policy: 0.0,
@@ -273,16 +273,16 @@ impl<T: GameRep> Default for Node<T> {
     }
 }
 
-impl<T: GameRep> Node<T> {
+impl Node {
     pub fn is_terminal(&self) -> bool {
         self.state != GameState::Ongoing
     }
 
-    pub fn mov(&self) -> T::Move {
+    pub fn mov(&self) -> u16 {
         self.mov
     }
 
-    pub fn get_state(&mut self, pos: &T) -> GameState {
+    pub fn get_state<T: GameRep>(&mut self, pos: &T) -> GameState {
         self.state = pos.game_state();
         self.state
     }

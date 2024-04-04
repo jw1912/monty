@@ -12,10 +12,11 @@ use crate::{
     game::{GameRep, GameState},
 };
 
-use self::{frc::Castling, moves::Move, qsearch::quiesce};
+use self::{frc::Castling, qsearch::quiesce};
 
 pub use self::{
     board::Board,
+    moves::Move,
     policy::{PolicyNetwork, SubNet, POLICY_NETWORK},
     value::{ValueNetwork, NNUE},
 };

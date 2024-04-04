@@ -156,12 +156,12 @@ fn position<T: GameRep>(commands: Vec<&str>, pos: &mut T) {
 #[allow(clippy::too_many_arguments)]
 fn go<T: GameRep>(
     commands: &[&str],
-    tree: Tree<T>,
+    tree: Tree,
     prev: Option<T>,
     pos: &T,
     params: &MctsParams,
     _: bool,
-) -> (Tree<T>, T) {
+) -> (Tree, T) {
     let mut max_nodes = 10_000_000;
     let mut max_time = None;
     let mut max_depth = 256;

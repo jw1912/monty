@@ -17,13 +17,13 @@ pub struct Limits {
 
 pub struct Searcher<T: GameRep> {
     root_position: T,
-    tree: Tree<T>,
+    tree: Tree,
     selection: Vec<i32>,
     params: MctsParams,
 }
 
 impl<T: GameRep> Searcher<T> {
-    pub fn new(root_position: T, tree: Tree<T>, params: MctsParams) -> Self {
+    pub fn new(root_position: T, tree: Tree, params: MctsParams) -> Self {
         Self {
             root_position,
             tree,
@@ -110,7 +110,7 @@ impl<T: GameRep> Searcher<T> {
 
         let best_idx = self.tree.get_best_child(self.tree.root_node());
         let best_child = &self.tree[best_idx];
-        (best_child.mov(), best_child.q())
+        (T::Move::from(best_child.mov()), best_child.q())
     }
 
     fn select_leaf(&mut self, pos: &mut T) {
@@ -148,7 +148,7 @@ impl<T: GameRep> Searcher<T> {
 
             // descend down the tree
             let mov = self.tree[next].mov();
-            pos.make_move(mov);
+            pos.make_move(T::Move::from(mov));
             self.selection.push(next);
             node_ptr = next;
         }
@@ -247,7 +247,7 @@ impl<T: GameRep> Searcher<T> {
         while depth > 0 && idx != -1 {
             let node = &self.tree[idx];
             let mov = node.mov();
-            pv.push(mov);
+            pv.push(T::Move::from(mov));
 
             idx = self.tree.get_best_child(idx);
             depth -= 1;
@@ -256,7 +256,7 @@ impl<T: GameRep> Searcher<T> {
         (pv, score)
     }
 
-    pub fn tree_and_board(self) -> (Tree<T>, T) {
+    pub fn tree_and_board(self) -> (Tree, T) {
         (self.tree, self.root_position)
     }
 
