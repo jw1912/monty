@@ -79,7 +79,7 @@ pub trait UciLike: Sized {
 
         for fen in bench_fens {
             let pos = Self::Game::from_fen(fen);
-            let mut searcher = Searcher::new(pos, Tree::new(10_000_000), params.clone());
+            let mut searcher = Searcher::new(pos, Tree::new(1_000_000), params.clone());
             searcher.search(limits, false, &mut total_nodes, &None);
         }
 
