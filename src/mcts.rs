@@ -49,6 +49,7 @@ impl<T: GameRep> Searcher<T> {
         // the tree and expand it
         if self.tree.is_empty() {
             let node = self.tree.push(Node::default());
+            self.tree.make_root_node(node);
             self.tree.expand(node, &self.root_position);
         }
 
