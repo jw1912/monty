@@ -28,7 +28,7 @@ impl<T: GameRep> Tree<T> {
     pub fn expand(&mut self, ptr: i32, pos: &T) {
         let feats = pos.get_policy_feats();
         let mut next_sibling = -1;
-        let mut max = -f32::NEG_INFINITY;
+        let mut max = f32::NEG_INFINITY;
 
         pos.map_legal_moves(|mov| {
             let node = Node {

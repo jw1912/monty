@@ -138,7 +138,7 @@ impl std::fmt::Display for Chess {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let feats = self.get_policy_feats();
         let mut moves = Vec::new();
-        let mut max = -f32::NEG_INFINITY;
+        let mut max = f32::NEG_INFINITY;
         self.map_legal_moves(|mov| {
             let policy = self.get_policy(mov, &feats);
             moves.push((mov, policy));

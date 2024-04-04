@@ -43,8 +43,8 @@ impl<T: GameRep> Searcher<T> {
     fn pick_child(&self, node: &Node<T>) -> i32 {
         let expl = self.params.cpuct() * (node.visits().max(1) as f32).sqrt();
 
-        let mut best_idx = 0;
-        let mut best_uct = 0.0;
+        let mut best_idx = -1;
+        let mut best_uct = f32::NEG_INFINITY;
 
         let fpu = if node.visits() > 0 {
             1.0 - node.wins() / node.visits() as f32
@@ -53,7 +53,6 @@ impl<T: GameRep> Searcher<T> {
         };
 
         let mut child_idx = node.first_child();
-
         while child_idx != -1 {
             let child = &self.tree[child_idx];
 
@@ -198,8 +197,6 @@ impl<T: GameRep> Searcher<T> {
             self.tree.push(Node::default());
             self.tree.expand(0, &self.root_position);
         }
-
-        println!("{}", self.tree.len());
 
         let mut nodes = 0;
         let mut depth = 0;
