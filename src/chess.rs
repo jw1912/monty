@@ -159,8 +159,8 @@ impl std::fmt::Display for Chess {
             *policy /= total;
         }
 
-        let mut w = [0f32; 49];
-        let mut count = [0; 49];
+        let mut w = [0f32; 64];
+        let mut count = [0; 64];
 
         for &(mov, policy) in moves.iter() {
             let fr = usize::from(mov.from());
