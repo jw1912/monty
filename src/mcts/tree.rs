@@ -347,4 +347,66 @@ impl Tree {
     pub fn get_best_child(&self, ptr: i32) -> i32 {
         self.get_best_child_by_key(ptr, |child| child.q())
     }
+
+    pub fn display<T: GameRep>(&self, idx: i32, depth: usize) {
+        let mut bars = vec![true; depth + 1];
+        self.display_recurse::<T>(idx, depth + 1, 0, &mut bars);
+    }
+
+    fn display_recurse<T: GameRep>(&self, idx: i32, depth: usize, ply: usize, bars: &mut [bool]) {
+        let node = &self[idx];
+
+        if depth == 0 || node.visits == 0 {
+            return;
+        }
+
+        let mov = if ply > 0 {
+            for &bar in bars.iter().take(ply - 1) {
+                if bar {
+                    print!("\u{2502}   ");
+                } else {
+                    print!("    ");
+                }
+            }
+
+            if bars[ply - 1] {
+                print!("\u{251C}\u{2500}> ");
+            } else {
+                print!("\u{2514}\u{2500}> ");
+            }
+
+            T::Move::from(node.mov).to_string()
+        } else {
+            "root".to_string()
+        };
+
+        let mut q = node.q();
+        if ply % 2 == 0 {
+            q = 1.0 - q;
+        }
+
+        println!(
+            "{mov} Q({:.2}%) N({}) P({:.2}%)",
+            q * 100.0,
+            node.visits,
+            node.policy * 100.0,
+        );
+
+        let mut active = Vec::new();
+        self.map_children(idx, |child_ptr, child| {
+            if child.visits > 0 {
+                active.push(child_ptr);
+            }
+        });
+
+        let end = active.len() - 1;
+
+        for (i, &child_idx) in active.iter().enumerate() {
+            if i == end {
+                bars[ply] = false;
+            }
+            self.display_recurse::<T>(child_idx, depth - 1, ply + 1, bars);
+            bars[ply] = true;
+        }
+    }
 }
