@@ -1,4 +1,7 @@
-use crate::{game::{GameRep, GameState}, MctsParams};
+use crate::{
+    game::{GameRep, GameState},
+    MctsParams,
+};
 
 #[derive(Clone)]
 pub struct Node {
@@ -190,7 +193,12 @@ impl Tree {
         }
     }
 
-    pub fn expand<T: GameRep, const IS_ROOT: bool>(&mut self, ptr: i32, pos: &T, params: &MctsParams) {
+    pub fn expand<T: GameRep, const IS_ROOT: bool>(
+        &mut self,
+        ptr: i32,
+        pos: &T,
+        params: &MctsParams,
+    ) {
         let feats = pos.get_policy_feats();
         let mut next_sibling = -1;
         let mut max = f32::NEG_INFINITY;
