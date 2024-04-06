@@ -20,7 +20,7 @@ pub struct Flag;
 impl Flag {
     pub const QUIET: u8 = 0;
     pub const CAP: u8 = 0b10_00_00_00;
-    pub const PROMO: u8 = 0b10_00_00_00;
+    pub const PROMO: u8 = 0b01_00_00_00;
     pub const ALL: u8 = 0b11_00_00_00;
 }
 

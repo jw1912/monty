@@ -103,7 +103,7 @@ impl Board {
         }
 
         if self.opps().count_ones() == 1 {
-            panic!("should never reach this state!")
+            return GameState::Won;
         }
 
         if self.boys().count_ones() == 1 {
@@ -245,12 +245,14 @@ impl Board {
         // captures
         if mov.is_capture() {
             let captured = self.get_pc(1 << mov.to());
+            assert_ne!(captured, Piece::KING, "attempted to capture king");
             self.halfm = 0;
             self.toggle(side ^ 1, captured, mov.to());
         }
 
         // place piece on destination square
         if mov.is_promo() {
+            assert_eq!(moved, Piece::PAWN, "attempted to promote non-pawn");
             self.toggle(side, Piece::QUEEN, mov.to())
         } else {
             self.toggle(side, moved, mov.to())
@@ -472,6 +474,44 @@ impl Board {
                 f(Move::new(from as u8, to, Flag::PROMO));
             }
         }
+    }
+
+    pub fn as_fen(&self) -> String {
+        const PIECES: [char; 12] = ['P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k'];
+        let mut fen = String::new();
+
+        for rank in (0..8).rev() {
+            let mut clear = 0;
+
+            for file in 0..8 {
+                let sq = 8 * rank + file;
+                let bit = 1 << sq;
+                let pc = self.get_pc(bit);
+                if pc != 0 {
+                    if clear > 0 {
+                        fen.push_str(&format!("{}", clear));
+                    }
+                    clear = 0;
+                    fen.push(PIECES[pc - 2 + 6 * usize::from(self.piece(Side::BLACK) & bit > 0)]);
+                } else {
+                    clear += 1;
+                }
+            }
+
+            if clear > 0 {
+                fen.push_str(&format!("{}", clear));
+            }
+
+            if rank > 0 {
+                fen.push('/');
+            }
+        }
+
+        fen.push(' ');
+        fen.push(['w', 'b'][self.stm()]);
+        fen.push_str(" 0 1");
+
+        fen
     }
 }
 
