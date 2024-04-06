@@ -14,7 +14,7 @@ use self::frc::Castling;
 pub use self::{
     board::Board,
     moves::Move,
-    policy::{PolicyNetwork, SubNet},
+    policy::{PolicyNetwork, SubNet, POLICY},
 };
 
 const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -130,27 +130,16 @@ impl GameRep for Chess {
     }
 
     fn get_policy_feats(&self) -> goober::SparseVector {
-        //let mut feats = goober::SparseVector::with_capacity(32);
-        //self.board.map_features(|feat| feats.push(feat));
-        //feats
-        goober::SparseVector::with_capacity(0)
+        let mut feats = goober::SparseVector::with_capacity(32);
+        self.board.map_features(|feat| feats.push(feat));
+        feats
     }
 
-    fn get_policy(&self, _: Self::Move, _: &goober::SparseVector) -> f32 {
-        0.0
+    fn get_policy(&self, mov: Self::Move, feats: &goober::SparseVector) -> f32 {
+        POLICY.get(&mov, feats, self.board.flip_val())
     }
 
     fn get_value(&self) -> i32 {
-        //const VALS: [i32; 5] = [100, 300, 300, 500, 900];
-        //let boys = self.board.boys();
-        //let opps = self.board.opps();
-        //let mut mat = 0;
-        //for (bb, val) in self.bbs().iter().skip(2).zip(VALS).take(5) {
-        //    let b = (bb & boys).count_ones();
-        //    let o = (bb & opps).count_ones();
-        //    mat += val * (b as i32 - o as i32);
-        //}
-
         VALUE.eval(&self.board)
     }
 
