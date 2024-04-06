@@ -17,7 +17,7 @@ fn main() {
         .build();
 
     let schedule = TrainingSchedule {
-        net_id: "shatranj-value001".to_string(),
+        net_id: "shatranj-value002".to_string(),
         eval_scale: 400.0,
         ft_regularisation: 0.0,
         batch_size: 16_384,
@@ -36,7 +36,7 @@ fn main() {
 
     let settings = LocalSettings {
         threads: 4,
-        data_file_paths: vec!["data/shatranj/shatranj-value001.data"],
+        data_file_paths: vec!["data/shatranj/shatranj-value002.data"],
         output_directory: "checkpoints",
     };
 

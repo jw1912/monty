@@ -15,7 +15,7 @@ pub struct ValueNetwork {
 }
 
 static NET: ValueNetwork =
-    unsafe { std::mem::transmute(*include_bytes!("../../resources/shatranj-value001.bin")) };
+    unsafe { std::mem::transmute(*include_bytes!("../../resources/shatranj-value002.bin")) };
 
 impl ValueNetwork {
     pub fn eval(board: &Board) -> i32 {
