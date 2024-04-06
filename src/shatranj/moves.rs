@@ -26,7 +26,10 @@ impl std::fmt::Display for Move {
 }
 
 impl Move {
-    pub const NULL: Move = Move { from: 0, to_and_flag: 0 };
+    pub const NULL: Move = Move {
+        from: 0,
+        to_and_flag: 0,
+    };
 
     pub fn from(&self) -> u8 {
         self.from
@@ -50,13 +53,14 @@ impl Move {
 
     pub fn new(from: u8, to: u16, flag: u8) -> Self {
         Self {
-            from, to_and_flag: to as u8 | flag,
+            from,
+            to_and_flag: to as u8 | flag,
         }
     }
 
     pub fn to_uci(self) -> String {
         let conv = |i| format!("{}{}", ((i & 7) + b'a') as char, (i / 8) + 1);
-        let promo = if self.is_promo(){"q"} else {""};
+        let promo = if self.is_promo() { "q" } else { "" };
 
         format!("{}{}{}", conv(self.from()), conv(self.to()), promo)
     }

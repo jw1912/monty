@@ -121,7 +121,7 @@ impl Board {
                 } else {
                     GameState::Lost
                 }
-            }
+            };
         }
 
         let mut count = 0;
@@ -219,12 +219,7 @@ impl Board {
         threats
     }
 
-    pub fn toggle(
-        &mut self,
-        side: usize,
-        piece: usize,
-        sq: u8,
-    ) {
+    pub fn toggle(&mut self, side: usize, piece: usize, sq: u8) {
         let bit = 1 << sq;
         self.bb[piece] ^= bit;
         self.bb[side] ^= bit;
@@ -294,10 +289,7 @@ impl Board {
         pos
     }
 
-    pub fn map_legal_moves<F: FnMut(Move)>(
-        &self,
-        f: &mut F,
-    ) {
+    pub fn map_legal_moves<F: FnMut(Move)>(&self, f: &mut F) {
         let pinned = self.pinned();
         let king_sq = self.king_index();
         let threats = self.threats();
@@ -326,13 +318,7 @@ impl Board {
         serialise(f, attacks & !occ, king_sq as u8, Flag::QUIET);
     }
 
-    fn gen_pnbrq<F: FnMut(Move)>(
-        &self,
-        f: &mut F,
-        checkers: u64,
-        free: u64,
-        pinned: u64,
-    ) {
+    fn gen_pnbrq<F: FnMut(Move)>(&self, f: &mut F, checkers: u64, free: u64, pinned: u64) {
         let boys = self.boys();
         let pawns = self.piece(Piece::PAWN) & boys;
         let side = self.stm();
@@ -392,11 +378,7 @@ impl Board {
         self.piece_moves_internal::<PC, true, F>(f, check_mask, attackers & pinned);
     }
 
-    fn piece_moves_internal<
-        const PC: usize,
-        const PINNED: bool,
-        F: FnMut(Move),
-    >(
+    fn piece_moves_internal<const PC: usize, const PINNED: bool, F: FnMut(Move)>(
         &self,
         f: &mut F,
         check_mask: u64,
@@ -517,7 +499,7 @@ fn line_through(sq1: usize, sq2: usize) -> u64 {
     }
 
     if sq1 / 8 == sq2 / 8 {
-        return 0xFF << (sq1 - file)
+        return 0xFF << (sq1 - file);
     }
 
     0

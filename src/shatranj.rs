@@ -1,6 +1,6 @@
 mod attacks;
-mod consts;
 mod board;
+mod consts;
 mod moves;
 
 pub use board::Board;

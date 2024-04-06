@@ -1,6 +1,5 @@
 use monty::UciLike;
 
-
 fn main() {
     let mut args = std::env::args();
     let arg1 = args.nth(1);

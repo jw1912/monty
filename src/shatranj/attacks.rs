@@ -1,4 +1,4 @@
-use super::consts::{Piece, File};
+use super::consts::{File, Piece};
 use crate::init;
 
 pub struct Attacks;
@@ -121,9 +121,9 @@ const BISHOP: [u64; 64] = init!(|sq, 64| {
     let bit = 1 << sq;
 
     ((bit & !(ADBL | LDBL)) >> 18)
-    | ((bit & !(ADBL | UDBL)) << 14)
-    | ((bit & !(HDBL | LDBL)) >> 14)
-    | ((bit & !(HDBL | UDBL)) << 18)
+        | ((bit & !(ADBL | UDBL)) << 14)
+        | ((bit & !(HDBL | LDBL)) >> 14)
+        | ((bit & !(HDBL | UDBL)) << 18)
 });
 
 const RANK_SHIFT: [usize; 64] = init!(|sq, 64| sq - (sq & 7) + 1);
