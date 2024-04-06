@@ -53,7 +53,11 @@ impl Board {
 
     #[must_use]
     pub fn king_index(&self) -> usize {
-        (self.bb[Piece::KING] & self.bb[usize::from(self.stm)]).trailing_zeros() as usize
+        self.ksq(self.stm())
+    }
+
+    fn ksq(&self, side: usize) -> usize {
+        (self.bb[Piece::KING] & self.bb[side]).trailing_zeros() as usize
     }
 
     #[must_use]
@@ -69,14 +73,6 @@ impl Board {
     pub fn in_check(&self) -> bool {
         let king = (self.piece(Piece::KING) & self.boys()).trailing_zeros();
         self.is_square_attacked(king as usize, self.stm(), self.occ())
-    }
-
-    pub fn draw(&self) -> bool {
-        if self.halfm >= 100 {
-            return true;
-        }
-
-        unimplemented!();
     }
 
     fn repetition(&self, stack: &[u64]) -> bool {
@@ -97,9 +93,35 @@ impl Board {
         false
     }
 
+    fn draw(&self) -> bool {
+        self.halfm >= 100 || self.occ().count_ones() == 2
+    }
+
     pub fn game_state(&self, stack: &[u64]) -> GameState {
         if self.draw() || self.repetition(stack) {
             return GameState::Draw;
+        }
+
+        if self.opps().count_ones() == 1 {
+            panic!("should never reach this state!")
+        }
+
+        if self.boys().count_ones() == 1 {
+            return if self.opps().count_ones() > 2 {
+                GameState::Lost
+            } else {
+                let boy = self.ksq(self.stm());
+                let opp = self.ksq(self.stm() ^ 1);
+                let remaining = self.opps() & !self.bb[Piece::KING];
+
+                if Attacks::king(boy) & remaining == 0 {
+                    GameState::Lost
+                } else if Attacks::king(opp) & remaining == 0 {
+                    GameState::Draw
+                } else {
+                    GameState::Lost
+                }
+            }
         }
 
         let mut count = 0;

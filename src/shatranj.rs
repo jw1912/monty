@@ -24,7 +24,7 @@ impl UciLike for Uci {
     type Game = Shatranj;
 
     fn options() {
-        println!("option name UCI_Chess960 type check default false");
+        println!("option name UCI_Variant type combo default shatranj var shatranj");
     }
 }
 
