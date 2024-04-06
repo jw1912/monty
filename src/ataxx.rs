@@ -5,7 +5,10 @@ mod util;
 
 use goober::SparseVector;
 
-use crate::{value::{ValueFeatureMap, ValueNetwork}, GameRep, MctsParams, UciLike};
+use crate::{
+    value::{ValueFeatureMap, ValueNetwork},
+    GameRep, MctsParams, UciLike,
+};
 
 pub use self::{
     board::Board,

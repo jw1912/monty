@@ -9,7 +9,7 @@ pub use moves::Move;
 use crate::{
     comm::UciLike,
     game::{GameRep, GameState},
-    value::{ValueNetwork, ValueFeatureMap},
+    value::{ValueFeatureMap, ValueNetwork},
     MctsParams,
 };
 

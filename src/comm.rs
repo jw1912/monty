@@ -47,7 +47,7 @@ pub trait UciLike: Sized {
                 "eval" => {
                     println!("cp: {}%", pos.get_value());
                     println!("wdl: {:.2}%", 100.0 * pos.get_value_wdl());
-                },
+                }
                 "policy" => {
                     let f = pos.get_policy_feats();
                     let mut max = f32::NEG_INFINITY;

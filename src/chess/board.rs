@@ -330,12 +330,7 @@ impl Board {
 
     // MODIFY POSITION
 
-    pub fn toggle(
-        &mut self,
-        side: usize,
-        piece: usize,
-        sq: u16,
-    ) {
+    pub fn toggle(&mut self, side: usize, piece: usize, sq: u16) {
         let bit = 1 << sq;
         self.bb[piece] ^= bit;
         self.bb[side] ^= bit;
