@@ -6,9 +6,7 @@ mod moves;
 mod policy;
 
 use crate::{
-    comm::UciLike,
-    game::{GameRep, GameState},
-    MctsParams,
+    comm::UciLike, game::{GameRep, GameState}, value::{ValueFeatureMap, ValueNetwork}, MctsParams
 };
 
 use self::frc::Castling;
@@ -20,6 +18,15 @@ pub use self::{
 };
 
 const STARTPOS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+static VALUE: ValueNetwork<768, 16> =
+    unsafe { std::mem::transmute(*include_bytes!("../resources/chess-value001.bin")) };
+
+impl ValueFeatureMap for Board {
+    fn value_feature_map<F: FnMut(usize)>(&self, f: F) {
+        self.map_features(f);
+    }
+}
 
 pub struct Uci;
 impl UciLike for Uci {
@@ -123,7 +130,10 @@ impl GameRep for Chess {
     }
 
     fn get_policy_feats(&self) -> goober::SparseVector {
-        self.board.get_features()
+        //let mut feats = goober::SparseVector::with_capacity(32);
+        //self.board.map_features(|feat| feats.push(feat));
+        //feats
+        goober::SparseVector::with_capacity(0)
     }
 
     fn get_policy(&self, _: Self::Move, _: &goober::SparseVector) -> f32 {
@@ -131,19 +141,17 @@ impl GameRep for Chess {
     }
 
     fn get_value(&self) -> i32 {
-        const VALS: [i32; 5] = [100, 300, 300, 500, 900];
-        let boys = self.board.boys();
-        let opps = self.board.opps();
+        //const VALS: [i32; 5] = [100, 300, 300, 500, 900];
+        //let boys = self.board.boys();
+        //let opps = self.board.opps();
+        //let mut mat = 0;
+        //for (bb, val) in self.bbs().iter().skip(2).zip(VALS).take(5) {
+        //    let b = (bb & boys).count_ones();
+        //    let o = (bb & opps).count_ones();
+        //    mat += val * (b as i32 - o as i32);
+        //}
 
-        let mut mat = 0;
-
-        for (bb, val) in self.bbs().iter().skip(2).zip(VALS).take(5) {
-            let b = (bb & boys).count_ones();
-            let o = (bb & opps).count_ones();
-            mat += val * (b as i32 - o as i32);
-        }
-
-        mat
+        VALUE.eval(&self.board)
     }
 
     fn perft(&self, depth: usize) -> u64 {
