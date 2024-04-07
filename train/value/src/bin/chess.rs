@@ -3,7 +3,7 @@ use bullet::{
     TrainingSchedule, WdlScheduler,
 };
 
-const HIDDEN_SIZE: usize = 32;
+const HIDDEN_SIZE: usize = 64;
 
 fn main() {
     let mut trainer = TrainerBuilder::default()
