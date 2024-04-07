@@ -258,10 +258,17 @@ impl<T: GameRep> Searcher<T> {
     }
 
     fn search_report(&self, depth: usize, timer: &Instant, nodes: usize) {
+        print!("info depth {depth} ");
         let (pv_line, score) = self.get_pv(depth);
-        let cp = -400.0 * (1.0 / score.clamp(0.0, 1.0) - 1.0).ln();
 
-        print!("info depth {depth} score cp {cp:.0} ");
+        if score == 1.0 {
+            print!("score mate {} ", (pv_line.len() + 1) / 2);
+        } else if score == 0.0 {
+            print!("score mate -{} ", pv_line.len() / 2);
+        } else {
+            let cp = -400.0 * (1.0 / score.clamp(0.0, 1.0) - 1.0).ln();
+            print!("score cp {cp:.0} ");
+        }
 
         let elapsed = timer.elapsed();
         let nps = nodes as f32 / elapsed.as_secs_f32();
