@@ -85,6 +85,10 @@ impl<T: GameRep> Searcher<T> {
             // step 4: backpropogate the result to the root
             self.backprop(result);
 
+            if self.tree[self.tree.root_node()].is_terminal() {
+                break;
+            }
+
             // check if hit node limit
             if nodes >= limits.max_nodes {
                 break;
@@ -102,12 +106,12 @@ impl<T: GameRep> Searcher<T> {
             if avg_depth > depth {
                 depth = avg_depth;
 
-                if uci_output {
-                    self.search_report(depth, &timer, nodes);
-                }
-
                 if depth >= limits.max_depth {
                     break;
+                }
+
+                if uci_output {
+                    self.search_report(depth, &timer, nodes);
                 }
             }
         }
@@ -170,18 +174,25 @@ impl<T: GameRep> Searcher<T> {
 
         // partial expansion (adding children to tree
         // is delayed to the second visit)
-        let state = self.tree[node_ptr].get_state(pos);
+        // game state stored relative to nstm from
+        // perspective of this node
+        let mut state = self.tree[node_ptr].state();
+        if state == GameState::Ongoing {
+            state = pos.game_state();
+            self.tree[node_ptr].set_state(state);
+        }
 
         // simulate the game outcome
         match state {
             GameState::Ongoing => pos.get_value_wdl(),
             GameState::Draw => 0.5,
-            GameState::Lost => -self.params.mate_bonus(),
-            GameState::Won => 1.0 + self.params.mate_bonus(),
+            GameState::Lost => 0.0,
+            GameState::Won => 1.0,
         }
     }
 
     fn backprop(&mut self, mut result: f32) {
+        let mut prev = GameState::Ongoing;
         while let Some(node_ptr) = self.selection.pop() {
             // flip result
             result = 1.0 - result;
@@ -190,10 +201,20 @@ impl<T: GameRep> Searcher<T> {
             // is stored from the nstm perspective, for
             // simplicity when it is used
             self.tree[node_ptr].update(1, result);
+
+            if prev == GameState::Lost {
+                self.tree[node_ptr].set_state(GameState::Won);
+            }
+
+            prev = self.tree[node_ptr].state();
         }
     }
 
-    fn pick_child(&self, ptr: i32) -> i32 {
+    fn pick_child(&mut self, ptr: i32) -> i32 {
+        if !self.tree[ptr].has_children() {
+            return -1;
+        }
+
         let is_root = ptr == self.tree.root_node();
         let cpuct = if is_root {
             self.params.root_cpuct()
@@ -213,12 +234,27 @@ impl<T: GameRep> Searcher<T> {
             0.5
         };
 
+        let mut proven_loss = true;
+
         // return child with highest PUCT score
-        self.tree.get_best_child_by_key(ptr, |child| {
+        let best = self.tree.get_best_child_by_key(ptr, |child| {
+            if child.state() != GameState::Won {
+                proven_loss = false;
+            }
+
             let q = if child.visits() == 0 { fpu } else { child.q() };
+
             let u = expl * child.policy() / (1 + child.visits()) as f32;
+
             q + u
-        })
+        });
+
+        if proven_loss {
+            self.tree[ptr].set_state(GameState::Lost);
+            return -1;
+        }
+
+        best
     }
 
     fn search_report(&self, depth: usize, timer: &Instant, nodes: usize) {
@@ -232,7 +268,7 @@ impl<T: GameRep> Searcher<T> {
         let ms = elapsed.as_millis();
         let hf = self.tree.len() * 1000 / self.tree.cap();
 
-        print!("time {ms} nodes {nodes} nps {nps:.0} hashfull {hf}");
+        print!("time {ms} nodes {nodes} nps {nps:.0} hashfull {hf} pv");
 
         for mov in pv_line {
             print!(" {}", self.root_position.conv_mov_to_str(mov));
