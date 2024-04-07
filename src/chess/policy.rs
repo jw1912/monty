@@ -8,7 +8,7 @@ pub static POLICY: PolicyNetwork =
 #[repr(C)]
 #[derive(Clone, Copy, FeedForwardNetwork)]
 pub struct SubNet {
-    ft: layer::SparseConnected<activation::ReLU, 768, 4>,
+    ft: layer::SparseConnected<activation::ReLU, 768, 8>,
 }
 
 impl SubNet {
@@ -32,7 +32,6 @@ impl SubNet {
 #[derive(Clone, Copy)]
 pub struct PolicyNetwork {
     pub subnets: [SubNet; 128],
-    pub hce: [f32; 4],
 }
 
 impl PolicyNetwork {
