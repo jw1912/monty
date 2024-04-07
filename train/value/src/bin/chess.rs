@@ -9,7 +9,7 @@ fn main() {
     let mut trainer = TrainerBuilder::default()
         .single_perspective()
         .quantisations(&[255, 64])
-        .input(inputs::Chess768)
+        .input(inputs::ChessBucketsMirrored::new([0; 32]))
         .output_buckets(outputs::Single)
         .feature_transformer(HIDDEN_SIZE)
         .activate(Activation::SCReLU)
