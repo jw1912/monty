@@ -22,7 +22,13 @@ impl std::ops::IndexMut<u64> for HashTable {
 impl HashTable {
     pub fn with_capacity(cap: usize) -> Self {
         Self {
-            inner: vec![-1; cap],
+            inner: vec![0; cap],
+        }
+    }
+
+    pub fn clear(&mut self) {
+        for entry in &mut self.inner {
+            *entry = 0;
         }
     }
 }
