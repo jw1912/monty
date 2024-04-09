@@ -58,7 +58,7 @@ impl<T: GameRep> Searcher<T> {
         let mut cumulative_depth = 0;
 
         // search until a further iteration may overflow the tree
-        while self.tree.remaining() > T::MAX_MOVES {
+        while self.tree.remaining() > 0 {
             nodes += 1;
 
             // start from the root
