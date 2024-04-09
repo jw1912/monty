@@ -124,7 +124,7 @@ impl Tree {
         assert_eq!(self.used, 0);
         assert_eq!(self.empty, root);
         self.root = -1;
-        self.mark = Mark::Empty;
+        self.mark = Mark::Var1;
     }
 
     fn delete_subtree(&mut self, ptr: i32, bad_mark: Mark) {
