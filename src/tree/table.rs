@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct HashTable {
     inner: Vec<i32>,
 }

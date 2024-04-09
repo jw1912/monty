@@ -1,18 +1,19 @@
 mod edge;
 mod node;
-mod table;
+//mod table;
 
 pub use edge::Edge;
 pub use node::{Mark, Node};
-use table::HashTable;
+//use table::HashTable;
 
 use std::time::Instant;
 
 use crate::games::{GameRep, GameState};
 
+#[derive(Debug)]
 pub struct Tree {
     tree: Vec<Node>,
-    _table: HashTable,
+    //table: HashTable,
     root: i32,
     empty: i32,
     used: usize,
@@ -37,19 +38,19 @@ impl Tree {
     pub fn new_mb(mb: usize) -> Self {
         let bytes = mb * 1024 * 1024;
 
-        let tree_bytes = 7 * bytes / 8;
-        let tt_bytes = bytes / 8;
+        //let tree_bytes = 7 * bytes / 8;
+        //let tt_bytes = bytes / 8;
 
-        let tree_cap = tree_bytes / std::mem::size_of::<Node>();
-        let tt_cap = tt_bytes / std::mem::size_of::<i32>();
+        //let tree_cap = tree_bytes / std::mem::size_of::<Node>();
+        //let tt_cap = tt_bytes / std::mem::size_of::<i32>();
 
-        Self::new(tree_cap, tt_cap)
+        Self::new(bytes / std::mem::size_of::<Node>() / 4, 0)
     }
 
-    fn new(tree_cap: usize, tt_cap: usize) -> Self {
+    fn new(tree_cap: usize, _: usize) -> Self {
         let mut tree = Self {
             tree: vec![Node::new(GameState::Ongoing); tree_cap],
-            _table: HashTable::with_capacity(tt_cap),
+            //table: HashTable::with_capacity(tt_cap),
             root: -1,
             empty: 0,
             used: 0,
@@ -83,7 +84,7 @@ impl Tree {
     }
 
     pub fn delete(&mut self, ptr: i32) {
-        self[ptr] = Node::new(GameState::Ongoing);
+        self[ptr].clear();
 
         let empty = self.empty;
         self[ptr].set_fwd_link(empty);
@@ -129,8 +130,10 @@ impl Tree {
     fn delete_subtree(&mut self, ptr: i32, bad_mark: Mark) {
         if self[ptr].mark() == bad_mark {
             for i in 0..self[ptr].actions().len() {
-                let ptr = self[ptr].actions()[i].ptr();
-                self.delete_subtree(ptr, bad_mark);
+                let child_ptr = self[ptr].actions()[i].ptr();
+                if child_ptr != -1 {
+                    self.delete_subtree(child_ptr, bad_mark);
+                }
             }
 
             self.delete(ptr);
@@ -215,28 +218,36 @@ impl Tree {
 
         for i in 0..self[ptr].actions().len() {
             let ptr = self[ptr].actions()[i].ptr();
-            self.mark_subtree(ptr);
+            if ptr != -1 {
+                self.mark_subtree(ptr);
+            }
         }
     }
 
-    pub fn get_best_child_by_key<F: FnMut(&Edge) -> f32>(&self, ptr: i32, mut key: F) -> &Edge {
-        let mut best_child = &self[ptr].actions()[0];
+    pub fn get_best_child_by_key<F: FnMut(&Edge) -> f32>(&self, ptr: i32, mut key: F) -> usize {
+        let mut best_child = usize::MAX;
         let mut best_score = f32::NEG_INFINITY;
 
-        for action in self[ptr].actions() {
+        for (i, action) in self[ptr].actions().iter().enumerate() {
             let score = key(action);
 
             if score > best_score {
                 best_score = score;
-                best_child = action;
+                best_child = i;
             }
         }
 
         best_child
     }
 
-    pub fn get_best_child(&self, ptr: i32) -> &Edge {
-        self.get_best_child_by_key(ptr, |child| self[child.ptr()].q())
+    pub fn get_best_child(&self, ptr: i32) -> usize {
+        self.get_best_child_by_key(ptr, |child| {
+            if child.ptr() == -1 {
+                f32::NEG_INFINITY
+            } else {
+                self[child.ptr()].q()
+            }
+        })
     }
 
     pub fn display<T: GameRep>(&self, idx: i32, depth: usize) {
@@ -294,8 +305,7 @@ impl Tree {
 
         let mut active = Vec::new();
         for action in node.actions() {
-            let child = &self[action.ptr()];
-            if child.visits() > 0 {
+            if action.ptr() != -1 {
                 active.push((action.ptr(), action.mov(), action.policy()));
             }
         }

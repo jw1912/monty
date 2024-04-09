@@ -1,6 +1,6 @@
 use crate::{GameState, tree::Edge, MctsParams, GameRep};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mark {
     Empty,
     Var1,
@@ -17,7 +17,7 @@ impl Mark {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Node {
     actions: Vec<Edge>,
     state: GameState,
@@ -86,6 +86,15 @@ impl Node {
 
     pub fn is_not_expanded(&self) -> bool {
         self.state == GameState::Ongoing && self.actions.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.actions.clear();
+        self.state = GameState::Ongoing;
+        self.mark = Mark::Empty;
+        self.fwd_link = -1;
+        self.visits = 0;
+        self.wins = 0.0;
     }
 
     pub fn set_mark(&mut self, mark: Mark) {
