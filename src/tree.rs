@@ -14,6 +14,8 @@ pub struct Tree {
     empty: i32,
     used: usize,
     mark: Mark,
+    lru_head: i32,
+    lru_tail: i32,
 }
 
 impl std::ops::Index<i32> for Tree {
@@ -38,11 +40,13 @@ impl Tree {
 
     fn new(cap: usize) -> Self {
         let mut tree = Self {
-            tree: vec![Node::new(GameState::Ongoing); cap / 4],
+            tree: vec![Node::new(GameState::Ongoing, -1, 0); cap / 4],
             root: -1,
             empty: 0,
             used: 0,
             mark: Mark::Var1,
+            lru_head: -1,
+            lru_tail: -1,
         };
 
         let end = tree.cap() as i32 - 1;
@@ -57,7 +61,18 @@ impl Tree {
     }
 
     pub fn push(&mut self, node: Node) -> i32 {
-        let new = self.empty;
+        let mut new = self.empty;
+
+        // tree is full, do some LRU pruning
+        if new == -1 {
+            new = self.lru_tail;
+            let parent = self[new].parent();
+            let action = self[new].action();
+
+            self[parent].actions_mut()[action].set_ptr(-1);
+
+            self.delete(new);
+        }
 
         assert_ne!(new, -1);
 
@@ -68,10 +83,17 @@ impl Tree {
         let mark = self.mark;
         self[new].set_mark(mark);
 
+        self.append_to_lru(new);
+
+        if self.used == 1 {
+            self.lru_tail = new;
+        }
+
         new
     }
 
     pub fn delete(&mut self, ptr: i32) {
+        self.remove_from_lru(ptr);
         self[ptr].clear();
 
         let empty = self.empty;
@@ -80,6 +102,41 @@ impl Tree {
         self.empty = ptr;
         self.used -= 1;
         assert!(self.used < self.cap());
+    }
+
+    pub fn make_recently_used(&mut self, ptr: i32) {
+        self.remove_from_lru(ptr);
+        self.append_to_lru(ptr);
+    }
+
+    fn append_to_lru(&mut self, ptr: i32) {
+        let old_head = self.lru_head;
+        if old_head != -1 {
+            self[old_head].set_bwd_link(ptr);
+        }
+        self.lru_head = ptr;
+        self[ptr].set_fwd_link(old_head);
+        self[ptr].set_bwd_link(-1);
+    }
+
+    fn remove_from_lru(&mut self, ptr: i32) {
+        let bwd = self[ptr].bwd_link();
+        let fwd = self[ptr].fwd_link();
+
+        if bwd != -1 {
+            self[bwd].set_fwd_link(fwd);
+        } else {
+            self.lru_head = fwd;
+        }
+
+        if fwd != -1 {
+            self[fwd].set_bwd_link(bwd);
+        } else {
+            self.lru_tail = bwd;
+        }
+
+        self[ptr].set_bwd_link(-1);
+        self[ptr].set_fwd_link(-1);
     }
 
     pub fn root_node(&self) -> i32 {
@@ -285,7 +342,7 @@ impl Tree {
 
         print!("{mov} Q({:.2}%) N({})", q * 100.0, node.visits());
         if ply > 0 {
-            println!("P({:.2}%) S({})", policy * 100.0, node.state());
+            println!(" P({:.2}%) S({})", policy * 100.0, node.state());
         } else {
             println!();
         }

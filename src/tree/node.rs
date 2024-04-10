@@ -22,21 +22,33 @@ pub struct Node {
     actions: Vec<Edge>,
     state: GameState,
     mark: Mark,
-    fwd_link: i32,
     visits: i32,
     wins: f32,
+
+    // used for lru
+    bwd_link: i32,
+    fwd_link: i32,
+    parent: i32,
+    action: u16,
 }
 
 impl Node {
-    pub fn new(state: GameState) -> Self {
+    pub fn new(state: GameState, parent: i32, action: usize) -> Self {
         Node {
             actions: Vec::new(),
             state,
             mark: Mark::Empty,
+            parent,
+            bwd_link: -1,
             fwd_link: -1,
             visits: 0,
             wins: 0.0,
+            action: action as u16,
         }
+    }
+
+    pub fn parent(&self) -> i32 {
+        self.parent
     }
 
     pub fn is_terminal(&self) -> bool {
@@ -59,6 +71,10 @@ impl Node {
         self.mark
     }
 
+    pub fn bwd_link(&self) -> i32 {
+        self.bwd_link
+    }
+
     pub fn fwd_link(&self) -> i32 {
         self.fwd_link
     }
@@ -73,6 +89,10 @@ impl Node {
 
     pub fn visits(&self) -> i32 {
         self.visits
+    }
+
+    pub fn action(&self) -> usize {
+        usize::from(self.action)
     }
 
     pub fn q(&self) -> f32 {
@@ -103,6 +123,10 @@ impl Node {
 
     pub fn set_fwd_link(&mut self, ptr: i32) {
         self.fwd_link = ptr;
+    }
+
+    pub fn set_bwd_link(&mut self, ptr: i32) {
+        self.bwd_link = ptr;
     }
 
     pub fn update(&mut self, visits: i32, result: f32) {

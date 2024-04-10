@@ -43,7 +43,7 @@ impl<T: GameRep> Searcher<T> {
         // we failed to reuse a tree, push the root node to
         // the tree and expand it
         if self.tree.is_empty() {
-            let node = self.tree.push(Node::new(GameState::Ongoing));
+            let node = self.tree.push(Node::new(GameState::Ongoing, -1, 0));
             self.tree.make_root_node(node);
             self.tree[node].expand::<T, true>(&self.root_position, &self.params);
         } else {
@@ -57,7 +57,7 @@ impl<T: GameRep> Searcher<T> {
         let mut cumulative_depth = 0;
 
         // search until a further iteration may overflow the tree
-        while self.tree.remaining() > 0 {
+        loop {
             // start from the root
             let mut pos = self.root_position.clone();
 
@@ -116,6 +116,9 @@ impl<T: GameRep> Searcher<T> {
     fn perform_one_iteration(&mut self, pos: &mut T, ptr: i32, depth: &mut usize) -> f32 {
         *depth += 1;
 
+        // mark this node as most recently used
+        self.tree.make_recently_used(ptr);
+
         let mut u;
         let child_state;
 
@@ -127,7 +130,7 @@ impl<T: GameRep> Searcher<T> {
             // an important optimisation - not only does it
             // massively reduce memory usage, it also is a
             // large speedup (avoids many policy net calculations)
-            if self.tree[ptr].visits() == 1 && self.tree[ptr].is_not_expanded() {
+            if self.tree[ptr].is_not_expanded() {
                 self.tree[ptr].expand::<T, false>(pos, &self.params);
             }
 
@@ -149,7 +152,7 @@ impl<T: GameRep> Searcher<T> {
                 // create it and push it
                 if child_ptr == -1 {
                     let state = pos.game_state();
-                    child_ptr = self.tree.push(Node::new(state));
+                    child_ptr = self.tree.push(Node::new(state, ptr, action));
                     self.tree[ptr].actions_mut()[action].set_ptr(child_ptr);
                 }
 
@@ -170,6 +173,9 @@ impl<T: GameRep> Searcher<T> {
         if let GameState::Lost(n) = child_state {
             self.tree[ptr].set_state(GameState::Won(n + 1));
         }
+
+        // mark this node as most recently used
+        self.tree.make_recently_used(ptr);
 
         u
     }
