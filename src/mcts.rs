@@ -15,7 +15,6 @@ pub struct Limits {
 pub struct Searcher<T: GameRep> {
     root_position: T,
     tree: Tree,
-    selection: Vec<i32>,
     params: MctsParams,
 }
 
@@ -24,7 +23,6 @@ impl<T: GameRep> Searcher<T> {
         Self {
             root_position,
             tree,
-            selection: Vec::new(),
             params,
         }
     }
@@ -51,6 +49,7 @@ impl<T: GameRep> Searcher<T> {
         } else {
             let node = self.tree.root_node();
             self.tree[node].relabel_policy(&self.root_position, &self.params);
+
         }
 
         let mut nodes = 0;
@@ -59,32 +58,16 @@ impl<T: GameRep> Searcher<T> {
 
         // search until a further iteration may overflow the tree
         while self.tree.remaining() > 0 {
-            nodes += 1;
-
             // start from the root
             let mut pos = self.root_position.clone();
 
-            // step 1: select a leaf node to expand,
-            // where a leaf node is defined as a node
-            // which has children that have not yet been
-            // expanded
-            if let Some(action) = self.select_leaf(&mut pos) {
-                // step 2: expand to the selected node
-                // (mostly delayed to second visit)
-                self.expand(action, &mut pos);
-            }
+            let mut this_depth = 0;
+            self.perform_one_iteration(&mut pos, self.tree.root_node(), &mut this_depth);
 
             // update depth statistics
-            let this_depth = self.selection.len() - 1;
-            cumulative_depth += this_depth;
-            let avg_depth = cumulative_depth / nodes;
+            cumulative_depth += this_depth - 1;
 
-            // step 3: simulate the game outcome
-            let result = self.simulate(&pos);
-
-            // step 4: backpropogate the result to the root
-            self.backprop(result);
-
+            // proven checkmate
             if self.tree[self.tree.root_node()].is_terminal() {
                 break;
             }
@@ -93,6 +76,8 @@ impl<T: GameRep> Searcher<T> {
             if nodes >= limits.max_nodes {
                 break;
             }
+
+            nodes += 1;
 
             // check for timeup
             if let Some(time) = limits.max_time {
@@ -103,6 +88,7 @@ impl<T: GameRep> Searcher<T> {
 
             // we define "depth" in the UCI sense as the average
             // depth of selection
+            let avg_depth = cumulative_depth / nodes;
             if avg_depth > depth {
                 depth = avg_depth;
 
@@ -119,7 +105,7 @@ impl<T: GameRep> Searcher<T> {
         *total_nodes += nodes;
 
         if uci_output {
-            self.search_report(depth, &timer, nodes);
+            self.search_report(depth.max(1), &timer, nodes);
         }
 
         let idx = self.tree.get_best_child(self.tree.root_node());
@@ -127,96 +113,67 @@ impl<T: GameRep> Searcher<T> {
         (T::Move::from(best_child.mov()), self.tree[best_child.ptr()].q())
     }
 
-    fn select_leaf(&mut self, pos: &mut T) -> Option<usize> {
-        // always start from the root
-        let mut node_ptr = self.tree.root_node();
+    fn perform_one_iteration(&mut self, pos: &mut T, ptr: i32, depth: &mut usize) -> f32 {
+        *depth += 1;
 
-        self.selection.clear();
-        self.selection.push(node_ptr);
-
-        loop {
-            let node = &self.tree[node_ptr];
-
-            // if the node is terminal we can go no further,
-            // we simply backpropogate the terminal score
-            if node.is_terminal() {
-                return None;
-            }
-
-            // this is "expanding on the second visit",
-            // an important optimisation - not only does it
-            // massively reduce memory usage, it also is a
-            // large speedup (avoids many policy net calculations)
-            if node.visits() == 1 && node.is_not_expanded() {
-                self.tree[node_ptr].expand::<T, false>(pos, &self.params);
-            }
-
-            // pick the next child based on PUCT score
-            let idx = self.pick_action(node_ptr);
-
-            // proved a loss from the child nodes
-            if idx == usize::MAX {
-                return None;
-            }
-
-            let edge = &self.tree[node_ptr].actions()[idx];
-            let mov = edge.mov();
-            node_ptr = edge.ptr();
-
-            if node_ptr == -1 {
-                return Some(idx);
-            }
-
-            // descend down the tree
-            pos.make_move(T::Move::from(mov));
-            self.selection.push(node_ptr);
-        }
-    }
-
-    fn expand(&mut self, action: usize, pos: &mut T) {
-        // selected node
-        let node_ptr = self.selected();
-        let edge = &self.tree[node_ptr].actions()[action];
-
-        let mov = T::Move::from(edge.mov());
-        pos.make_move(mov);
-
-        let state = pos.game_state();
-        let ptr = self.tree.push(Node::new(state));
-
-        self.tree[node_ptr].actions_mut()[action].set_ptr(ptr);
-        self.selection.push(ptr);
-    }
-
-    fn simulate(&self, pos: &T) -> f32 {
-        let node = &self.tree[self.selected()];
-
-        // simulate the game outcome
-        match node.state() {
+        let utility = |state| match state {
             GameState::Ongoing => pos.get_value_wdl(),
             GameState::Draw => 0.5,
             GameState::Lost(_) => 0.0,
             GameState::Won(_) => 1.0,
-        }
-    }
+        };
 
-    fn backprop(&mut self, mut result: f32) {
-        let mut prev = GameState::Ongoing;
-        while let Some(node_ptr) = self.selection.pop() {
-            // flip result
-            result = 1.0 - result;
+        let mut u;
+        let child_state;
 
-            // for a `node` with given stm, `node.wins`
-            // is stored from the nstm perspective, for
-            // simplicity when it is used
-            self.tree[node_ptr].update(1, result);
-
-            if let GameState::Lost(n) = prev {
-                self.tree[node_ptr].set_state(GameState::Won(n + 1));
+        if self.tree[ptr].is_terminal() || self.tree[ptr].visits() == 0 {
+            child_state = GameState::Ongoing;
+            u = utility(self.tree[ptr].state());
+        } else {
+            // this is "expanding on the second visit",
+            // an important optimisation - not only does it
+            // massively reduce memory usage, it also is a
+            // large speedup (avoids many policy net calculations)
+            if self.tree[ptr].visits() == 1 && self.tree[ptr].is_not_expanded() {
+                self.tree[ptr].expand::<T, false>(pos, &self.params);
             }
 
-            prev = self.tree[node_ptr].state();
+            // select action to take via puct
+            let action = self.pick_action(ptr);
+
+            // proved a loss from the child nodes
+            if action == usize::MAX {
+                child_state = GameState::Ongoing;
+                u = utility(self.tree[ptr].state());
+            } else {
+                let edge = &self.tree[ptr].actions()[action];
+                let mut child_ptr = edge.ptr();
+
+                // descend down the tree
+                pos.make_move(T::Move::from(edge.mov()));
+
+                // this node has not yet been pushed to the tree
+                // create it and push it
+                if child_ptr == -1 {
+                    let state = pos.game_state();
+                    child_ptr = self.tree.push(Node::new(state));
+                    self.tree[ptr].actions_mut()[action].set_ptr(child_ptr);
+                }
+
+                child_state = self.tree[child_ptr].state();
+                u = self.perform_one_iteration(pos, child_ptr, depth);
+            }
+        };
+
+        u = 1.0 - u;
+
+        self.tree[ptr].update(1, u);
+
+        if let GameState::Lost(n) = child_state {
+            self.tree[ptr].set_state(GameState::Won(n + 1));
         }
+
+        u
     }
 
     fn pick_action(&mut self, ptr: i32) -> usize {
@@ -237,11 +194,7 @@ impl<T: GameRep> Searcher<T> {
 
         // first play urgency - choose a Q value for
         // moves which have no been played yet
-        let fpu = if node.visits() > 0 {
-            1.0 - node.q()
-        } else {
-            0.5
-        };
+        let fpu = 1.0 - node.q();
 
         let mut proven_loss = true;
         let mut win_len = 0;
@@ -326,10 +279,6 @@ impl<T: GameRep> Searcher<T> {
         let idx = self.tree.get_best_child_by_key(self.tree.root_node(), key);
         let mut action = &self.tree[self.tree.root_node()].actions()[idx];
 
-        if action.ptr() == -1 {
-            println!("{:#?}", self.tree[self.tree.root_node()]);
-        }
-
         let score = self.tree[action.ptr()].q();
         let mut pv = Vec::new();
 
@@ -350,10 +299,6 @@ impl<T: GameRep> Searcher<T> {
 
     pub fn tree_and_board(self) -> (Tree, T) {
         (self.tree, self.root_position)
-    }
-
-    fn selected(&self) -> i32 {
-        *self.selection.last().unwrap()
     }
 
     pub fn display_moves(&self) {

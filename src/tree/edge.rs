@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Edge {
     ptr: i32,
     mov: u16,

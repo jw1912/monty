@@ -297,13 +297,13 @@ impl Tree {
             q = 1.0 - q;
         }
 
-        println!(
-            "{mov} Q({:.2}%) N({}) P({:.2}%) S({})",
-            q * 100.0,
-            node.visits(),
-            policy * 100.0,
-            node.state(),
-        );
+        print!("{mov} Q({:.2}%) N({})", q * 100.0, node.visits());
+        if ply > 0 {
+            println!("P({:.2}%) S({})", policy * 100.0, node.state());
+        } else {
+            println!();
+        }
+
 
         let mut active = Vec::new();
         for action in node.actions() {
