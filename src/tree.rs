@@ -16,6 +16,7 @@ pub struct Tree {
     mark: Mark,
     lru_head: i32,
     lru_tail: i32,
+    parent_edge: Edge,
 }
 
 impl std::ops::Index<i32> for Tree {
@@ -47,6 +48,7 @@ impl Tree {
             mark: Mark::Var1,
             lru_head: -1,
             lru_tail: -1,
+            parent_edge: Edge::new(0, 0, 0),
         };
 
         let end = tree.cap() as i32 - 1;
@@ -69,7 +71,7 @@ impl Tree {
             let parent = self[new].parent();
             let action = self[new].action();
 
-            self[parent].actions_mut()[action].set_ptr(-1);
+            self.edge_mut(parent, action).set_ptr(-1);
 
             self.delete(new);
         }
@@ -175,7 +177,7 @@ impl Tree {
     fn delete_subtree(&mut self, ptr: i32, bad_mark: Mark) {
         if self[ptr].mark() == bad_mark {
             for i in 0..self[ptr].actions().len() {
-                let child_ptr = self[ptr].actions()[i].ptr();
+                let child_ptr = self.edge(ptr, i).ptr();
                 if child_ptr != -1 {
                     self.delete_subtree(child_ptr, bad_mark);
                 }
@@ -188,7 +190,25 @@ impl Tree {
     pub fn make_root_node(&mut self, node: i32) {
         self.root = node;
         self.mark = self[node].mark();
+        self.parent_edge = *self.edge(self[node].parent(), self[node].action());
+        self[node].clear_parent();
         self[node].set_state(GameState::Ongoing);
+    }
+
+    pub fn edge(&self, ptr: i32, idx: usize) -> &Edge {
+        if ptr == -1 {
+            &self.parent_edge
+        } else {
+            &self[ptr].actions()[idx]
+        }
+    }
+
+    pub fn edge_mut(&mut self, ptr: i32, idx: usize) -> &mut Edge {
+        if ptr == -1 {
+            &mut self.parent_edge
+        } else {
+            &mut self[ptr].actions_mut()[idx]
+        }
     }
 
     pub fn try_use_subtree<T: GameRep>(&mut self, root: &T, prev_board: &Option<T>) {
@@ -262,7 +282,7 @@ impl Tree {
         self[ptr].set_mark(mark.flip());
 
         for i in 0..self[ptr].actions().len() {
-            let ptr = self[ptr].actions()[i].ptr();
+            let ptr = self.edge(ptr, i).ptr();
             if ptr != -1 {
                 self.mark_subtree(ptr);
             }
@@ -287,31 +307,36 @@ impl Tree {
 
     pub fn get_best_child(&self, ptr: i32) -> usize {
         self.get_best_child_by_key(ptr, |child| {
-            if child.ptr() == -1 {
+            if child.visits() == 0 {
                 f32::NEG_INFINITY
+            } else if child.ptr() != -1 {
+                match self[child.ptr()].state() {
+                    GameState::Won(_) => 0.0,
+                    GameState::Lost(_) => 1.0,
+                    GameState::Draw => 0.5,
+                    GameState::Ongoing => child.q(),
+                }
             } else {
-                self[child.ptr()].q()
+                child.q()
             }
         })
     }
 
     pub fn display<T: GameRep>(&self, idx: i32, depth: usize) {
         let mut bars = vec![true; depth + 1];
-        self.display_recurse::<T>(idx, depth + 1, 0, &mut bars, 0, 1.0);
+        self.display_recurse::<T>(Edge::new(idx, 0, 0), depth + 1, 0, &mut bars);
     }
 
     fn display_recurse<T: GameRep>(
         &self,
-        idx: i32,
+        edge: Edge,
         depth: usize,
         ply: usize,
         bars: &mut [bool],
-        mov: u16,
-        policy: f32,
     ) {
-        let node = &self[idx];
+        let node = &self[edge.ptr()];
 
-        if depth == 0 || node.visits() == 0 {
+        if depth == 0 {
             return;
         }
 
@@ -330,38 +355,40 @@ impl Tree {
                 print!("\u{2514}\u{2500}> ");
             }
 
-            T::Move::from(mov).to_string()
+            T::Move::from(edge.mov()).to_string()
         } else {
             "root".to_string()
         };
 
-        let mut q = node.q();
+        let mut q = edge.q();
         if ply % 2 == 0 {
             q = 1.0 - q;
         }
 
-        print!("{mov} Q({:.2}%) N({})", q * 100.0, node.visits());
+        print!("{mov} Q({:.2}%) N({})", q * 100.0, edge.visits());
         if ply > 0 {
-            println!(" P({:.2}%) S({})", policy * 100.0, node.state());
+            println!(" P({:.2}%) S({})", edge.policy() * 100.0, node.state());
         } else {
             println!();
         }
 
 
         let mut active = Vec::new();
-        for action in node.actions() {
+        for &action in node.actions() {
             if action.ptr() != -1 {
-                active.push((action.ptr(), action.mov(), action.policy()));
+                active.push(action);
             }
         }
 
         let end = active.len() - 1;
 
-        for (i, &(ptr, mov, policy)) in active.iter().enumerate() {
+        for (i, &action) in active.iter().enumerate() {
             if i == end {
                 bars[ply] = false;
             }
-            self.display_recurse::<T>(ptr, depth - 1, ply + 1, bars, mov, policy);
+            if edge.visits() > 0 {
+                self.display_recurse::<T>(action, depth - 1, ply + 1, bars);
+            }
             bars[ply] = true;
         }
     }

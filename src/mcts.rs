@@ -109,8 +109,13 @@ impl<T: GameRep> Searcher<T> {
         }
 
         let idx = self.tree.get_best_child(self.tree.root_node());
-        let best_child = &self.tree[self.tree.root_node()].actions()[idx];
-        (T::Move::from(best_child.mov()), self.tree[best_child.ptr()].q())
+
+        if idx == usize::MAX {
+            self.tree.display::<T>(self.tree.root_node(), 1);
+        }
+
+        let best_child = &self.tree.edge(self.tree.root_node(), idx);
+        (T::Move::from(best_child.mov()), best_child.q())
     }
 
     fn perform_one_iteration(&mut self, pos: &mut T, ptr: i32, depth: &mut usize) -> f32 {
@@ -122,7 +127,11 @@ impl<T: GameRep> Searcher<T> {
         let mut u;
         let child_state;
 
-        if self.tree[ptr].is_terminal() || self.tree[ptr].visits() == 0 {
+        let parent = self.tree[ptr].parent();
+        let action = self.tree[ptr].action();
+        let pvisits = self.tree.edge(parent, action).visits();
+
+        if self.tree[ptr].is_terminal() || pvisits == 0 {
             child_state = GameState::Ongoing;
             u = self.get_utility(ptr, pos);
         } else {
@@ -142,7 +151,7 @@ impl<T: GameRep> Searcher<T> {
                 child_state = GameState::Ongoing;
                 u = self.get_utility(ptr, pos);
             } else {
-                let edge = &self.tree[ptr].actions()[action];
+                let edge = self.tree.edge(ptr, action);
                 let mut child_ptr = edge.ptr();
 
                 // descend down the tree
@@ -153,7 +162,7 @@ impl<T: GameRep> Searcher<T> {
                 if child_ptr == -1 {
                     let state = pos.game_state();
                     child_ptr = self.tree.push(Node::new(state, ptr, action));
-                    self.tree[ptr].actions_mut()[action].set_ptr(child_ptr);
+                    self.tree.edge_mut(ptr, action).set_ptr(child_ptr);
                 }
 
                 child_state = self.tree[child_ptr].state();
@@ -166,7 +175,7 @@ impl<T: GameRep> Searcher<T> {
         // parent's perspective)
         u = 1.0 - u;
 
-        self.tree[ptr].update(1, u);
+        self.tree.edge_mut(parent, action).update(u);
 
         // if the child node resulted in a loss, then
         // this node has a guaranteed win
@@ -202,12 +211,16 @@ impl<T: GameRep> Searcher<T> {
         };
         let node = &self.tree[ptr];
 
+        let parent = node.parent();
+        let action = node.action();
+        let edge = self.tree.edge(parent, action);
+
         // exploration factor to apply
-        let expl = cpuct * (node.visits().max(1) as f32).sqrt();
+        let expl = cpuct * (edge.visits().max(1) as f32).sqrt();
 
         // first play urgency - choose a Q value for
         // moves which have no been played yet
-        let fpu = 1.0 - node.q();
+        let fpu = 1.0 - edge.q();
 
         let mut proven_loss = true;
         let mut win_len = 0;
@@ -216,19 +229,23 @@ impl<T: GameRep> Searcher<T> {
 
         // return child with highest PUCT score
         for (i, action) in node.actions().iter().enumerate() {
-            let puct = if action.ptr() == -1 {
+            let puct = if action.visits() == 0 {
                 proven_loss = false;
                 fpu + expl * action.policy()
             } else {
-                let child = &self.tree[action.ptr()];
+                if action.ptr() != -1 {
+                    let child = &self.tree[action.ptr()];
 
-                if let GameState::Won(n) = child.state() {
-                    win_len = n.max(win_len);
+                    if let GameState::Won(n) = child.state() {
+                        win_len = n.max(win_len);
+                    } else {
+                        proven_loss = false;
+                    }
                 } else {
                     proven_loss = false;
                 }
 
-                child.q() + expl * action.policy() / (1 + child.visits()) as f32
+                action.q() + expl * action.policy() / (1 + action.visits()) as f32
             };
 
             if puct > max {
@@ -280,7 +297,7 @@ impl<T: GameRep> Searcher<T> {
                 let child = &self.tree[edge.ptr()];
                 match child.state() {
                     GameState::Draw => 0.5,
-                    GameState::Ongoing => child.q(),
+                    GameState::Ongoing => edge.q(),
                     GameState::Lost(n) => 1.0 + f32::from(n),
                     GameState::Won(n) => f32::from(n) - 256.0,
                 }
@@ -290,9 +307,9 @@ impl<T: GameRep> Searcher<T> {
         let mate = self.tree[self.tree.root_node()].is_terminal();
 
         let idx = self.tree.get_best_child_by_key(self.tree.root_node(), key);
-        let mut action = &self.tree[self.tree.root_node()].actions()[idx];
+        let mut action = self.tree.edge(self.tree.root_node(), idx);
 
-        let score = self.tree[action.ptr()].q();
+        let score = action.q();
         let mut pv = Vec::new();
 
         while (mate || depth > 0) && action.ptr() != -1 {
@@ -303,7 +320,7 @@ impl<T: GameRep> Searcher<T> {
                 break;
             }
 
-            action = &self.tree[action.ptr()].actions()[idx];
+            action = self.tree.edge(action.ptr(), idx);
             depth -= 1;
         }
 
@@ -317,7 +334,7 @@ impl<T: GameRep> Searcher<T> {
     pub fn display_moves(&self) {
         for action in self.tree[self.tree.root_node()].actions() {
             let mov = self.root_position.conv_mov_to_str(action.mov().into());
-            let q = self.tree[action.ptr()].q() * 100.0;
+            let q = action.q() * 100.0;
             println!("{mov} -> {q:.2}%");
         }
     }

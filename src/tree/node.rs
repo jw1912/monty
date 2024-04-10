@@ -22,8 +22,6 @@ pub struct Node {
     actions: Vec<Edge>,
     state: GameState,
     mark: Mark,
-    visits: i32,
-    wins: f32,
 
     // used for lru
     bwd_link: i32,
@@ -41,8 +39,6 @@ impl Node {
             parent,
             bwd_link: -1,
             fwd_link: -1,
-            visits: 0,
-            wins: 0.0,
             action: action as u16,
         }
     }
@@ -87,21 +83,13 @@ impl Node {
         !self.actions.is_empty()
     }
 
-    pub fn visits(&self) -> i32 {
-        self.visits
-    }
-
     pub fn action(&self) -> usize {
         usize::from(self.action)
     }
 
-    pub fn q(&self) -> f32 {
-        match self.state {
-            GameState::Won(_) => 0.0,
-            GameState::Lost(_) => 1.0,
-            GameState::Draw => 0.5,
-            GameState::Ongoing => self.wins / self.visits as f32,
-        }
+    pub fn clear_parent(&mut self) {
+        self.parent = -1;
+        self.action = 0;
     }
 
     pub fn is_not_expanded(&self) -> bool {
@@ -113,8 +101,6 @@ impl Node {
         self.state = GameState::Ongoing;
         self.mark = Mark::Empty;
         self.fwd_link = -1;
-        self.visits = 0;
-        self.wins = 0.0;
     }
 
     pub fn set_mark(&mut self, mark: Mark) {
@@ -127,11 +113,6 @@ impl Node {
 
     pub fn set_bwd_link(&mut self, ptr: i32) {
         self.bwd_link = ptr;
-    }
-
-    pub fn update(&mut self, visits: i32, result: f32) {
-        self.visits += visits;
-        self.wins += result;
     }
 
     pub fn expand<T: GameRep, const ROOT: bool>(
