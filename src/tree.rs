@@ -224,15 +224,10 @@ impl Tree {
                 found = true;
 
                 if root != self.root_node() {
-                    let size = self.count_subtree(root);
                     self.make_root_node(root);
-
-                    println!("info string found subtree of size {size} nodes");
+                    println!("info string found subtree");
                 } else {
-                    println!(
-                        "info string using current tree of size {} nodes",
-                        self.len()
-                    );
+                    println!("info string using current tree");
                 }
             }
         }
@@ -274,19 +269,6 @@ impl Tree {
         }
 
         -1
-    }
-
-    fn count_subtree(&self, ptr: i32) -> u64 {
-        let mut count = 1;
-
-        for i in 0..self[ptr].actions().len() {
-            let ptr = self.edge(ptr, i).ptr();
-            if ptr != -1 {
-                count += self.count_subtree(ptr);
-            }
-        }
-
-        count
     }
 
     pub fn get_best_child_by_key<F: FnMut(&Edge) -> f32>(&self, ptr: i32, mut key: F) -> usize {
@@ -334,7 +316,12 @@ impl Tree {
             return;
         }
 
-        let mov = if ply > 0 {
+        let mut q = edge.q();
+        if ply % 2 == 0 {
+            q = 1.0 - q;
+        }
+
+        if ply > 0 {
             for &bar in bars.iter().take(ply - 1) {
                 if bar {
                     print!("\u{2502}   ");
@@ -349,21 +336,17 @@ impl Tree {
                 print!("\u{2514}\u{2500}> ");
             }
 
-            T::Move::from(edge.mov()).to_string()
-        } else {
-            "root".to_string()
-        };
+            let mov = T::Move::from(edge.mov()).to_string();
 
-        let mut q = edge.q();
-        if ply % 2 == 0 {
-            q = 1.0 - q;
-        }
-
-        print!("{mov} Q({:.2}%) N({})", q * 100.0, edge.visits());
-        if ply > 0 {
-            println!(" P({:.2}%) S({})", edge.policy() * 100.0, node.state());
+            println!(
+                "{mov} Q({:.2}%) N({}) P({:.2}%) S({})",
+                q * 100.0,
+                edge.visits(),
+                edge.policy() * 100.0,
+                node.state(),
+            );
         } else {
-            println!();
+            println!("root");
         }
 
         let mut active = Vec::new();
@@ -379,7 +362,7 @@ impl Tree {
             if i == end {
                 bars[ply] = false;
             }
-            if edge.visits() > 0 {
+            if action.visits() > 0 {
                 self.display_recurse::<T>(action, depth - 1, ply + 1, bars);
             }
             bars[ply] = true;
