@@ -76,6 +76,7 @@ impl Node {
     pub fn clear(&mut self) {
         self.actions.clear();
         self.state = GameState::Ongoing;
+        self.bwd_link = -1;
         self.fwd_link = -1;
     }
 
