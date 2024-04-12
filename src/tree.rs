@@ -2,7 +2,7 @@ mod edge;
 mod node;
 
 pub use edge::Edge;
-pub use node::{Mark, Node};
+pub use node::Node;
 use std::time::Instant;
 
 use crate::games::{GameRep, GameState};
@@ -13,7 +13,6 @@ pub struct Tree {
     root: i32,
     empty: i32,
     used: usize,
-    mark: Mark,
     lru_head: i32,
     lru_tail: i32,
     parent_edge: Edge,
@@ -45,7 +44,6 @@ impl Tree {
             root: -1,
             empty: 0,
             used: 0,
-            mark: Mark::Var1,
             lru_head: -1,
             lru_tail: -1,
             parent_edge: Edge::new(0, 0, 0),
@@ -81,9 +79,6 @@ impl Tree {
         self.used += 1;
         self.empty = self[self.empty].fwd_link();
         self[new] = node;
-
-        let mark = self.mark;
-        self[new].set_mark(mark);
 
         self.append_to_lru(new);
 
@@ -167,29 +162,25 @@ impl Tree {
         }
 
         let root = self.root_node();
-        self.delete_subtree(root, self[root].mark());
+        self.delete_subtree(root);
         assert_eq!(self.used, 0);
         assert_eq!(self.empty, root);
         self.root = -1;
-        self.mark = Mark::Var1;
     }
 
-    fn delete_subtree(&mut self, ptr: i32, bad_mark: Mark) {
-        if self[ptr].mark() == bad_mark {
-            for i in 0..self[ptr].actions().len() {
-                let child_ptr = self.edge(ptr, i).ptr();
-                if child_ptr != -1 {
-                    self.delete_subtree(child_ptr, bad_mark);
-                }
+    fn delete_subtree(&mut self, ptr: i32) {
+        for i in 0..self[ptr].actions().len() {
+            let child_ptr = self.edge(ptr, i).ptr();
+            if child_ptr != -1 {
+                self.delete_subtree(child_ptr);
             }
-
-            self.delete(ptr);
         }
+
+        self.delete(ptr);
     }
 
     pub fn make_root_node(&mut self, node: i32) {
         self.root = node;
-        self.mark = self[node].mark();
         self.parent_edge = *self.edge(self[node].parent(), self[node].action());
         self[node].clear_parent();
         self[node].set_state(GameState::Ongoing);
@@ -228,12 +219,10 @@ impl Tree {
             if root == -1 || !self[root].has_children() {
                 self.clear();
             } else if root != self.root_node() {
-                let old_root = self.root_node();
-                self.mark_subtree(root);
+                let size = self.count_subtree(root);
                 self.make_root_node(root);
-                self.delete_subtree(old_root, self[old_root].mark());
 
-                println!("info string found subtree of size {} nodes", self.len());
+                println!("info string found subtree of size {size} nodes");
             } else {
                 println!(
                     "info string using current tree of size {} nodes",
@@ -277,16 +266,17 @@ impl Tree {
         -1
     }
 
-    fn mark_subtree(&mut self, ptr: i32) {
-        let mark = self[ptr].mark();
-        self[ptr].set_mark(mark.flip());
+    fn count_subtree(&self, ptr: i32) -> u64 {
+        let mut count = 1;
 
         for i in 0..self[ptr].actions().len() {
             let ptr = self.edge(ptr, i).ptr();
             if ptr != -1 {
-                self.mark_subtree(ptr);
+                count += self.count_subtree(ptr);
             }
         }
+
+        count
     }
 
     pub fn get_best_child_by_key<F: FnMut(&Edge) -> f32>(&self, ptr: i32, mut key: F) -> usize {
