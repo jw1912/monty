@@ -161,22 +161,21 @@ impl Tree {
             return;
         }
 
-        let root = self.root_node();
-        self.delete_subtree(root);
-        assert_eq!(self.used, 0);
-        assert_eq!(self.empty, root);
         self.root = -1;
-    }
+        self.empty = 0;
+        self.used = 0;
+        self.lru_head = -1;
+        self.lru_tail = -1;
+        self.parent_edge = Edge::new(0, 0, 0);
 
-    fn delete_subtree(&mut self, ptr: i32) {
-        for i in 0..self[ptr].actions().len() {
-            let child_ptr = self.edge(ptr, i).ptr();
-            if child_ptr != -1 {
-                self.delete_subtree(child_ptr);
-            }
+        let end = self.cap() as i32 - 1;
+
+        for i in 0..end {
+            self[i] = Node::new(GameState::Ongoing, -1, 0);
+            self[i].set_fwd_link(i + 1);
         }
 
-        self.delete(ptr);
+        self[end].set_fwd_link(-1);
     }
 
     pub fn make_root_node(&mut self, node: i32) {
@@ -206,31 +205,42 @@ impl Tree {
         let t = Instant::now();
 
         if self.is_empty() {
+            let node = self.push(Node::new(GameState::Ongoing, -1, 0));
+            self.make_root_node(node);
+
             return;
         }
 
         println!("info string attempting to reuse tree");
+
+        let mut found = false;
 
         if let Some(board) = prev_board {
             println!("info string searching for subtree");
 
             let root = self.recurse_find(self.root, board, root, 2);
 
-            if root == -1 || !self[root].has_children() {
-                self.clear();
-            } else if root != self.root_node() {
-                let size = self.count_subtree(root);
-                self.make_root_node(root);
+            if root != -1 && self[root].has_children() {
+                found = true;
 
-                println!("info string found subtree of size {size} nodes");
-            } else {
-                println!(
-                    "info string using current tree of size {} nodes",
-                    self.len()
-                );
+                if root != self.root_node() {
+                    let size = self.count_subtree(root);
+                    self.make_root_node(root);
+
+                    println!("info string found subtree of size {size} nodes");
+                } else {
+                    println!(
+                        "info string using current tree of size {} nodes",
+                        self.len()
+                    );
+                }
             }
-        } else {
-            self.clear();
+        }
+
+        if !found {
+            println!("info string no subtree found");
+            let node = self.push(Node::new(GameState::Ongoing, -1, 0));
+            self.make_root_node(node);
         }
 
         println!(
