@@ -125,11 +125,21 @@ impl<T: GameRep> Searcher<T> {
         // mark this node as most recently used
         self.tree.make_recently_used(ptr);
 
-        let mut u;
-        let child_state;
-
+        let hash = self.tree[ptr].hash();
         let parent = self.tree[ptr].parent();
         let action = self.tree[ptr].action();
+
+        // mcgs at home
+        if let Some(entry) = self.tree.probe_hash(hash) {
+            if self.tree.edge(parent, action).visits() < entry.visits {
+                self.tree
+                    .edge_mut(parent, action)
+                    .set_stats(entry.visits, entry.wins);
+            }
+        }
+
+        let mut u;
+        let child_state;
         let pvisits = self.tree.edge(parent, action).visits();
 
         if self.tree[ptr].is_terminal() || pvisits == 0 {
@@ -176,27 +186,10 @@ impl<T: GameRep> Searcher<T> {
         // parent's perspective)
         u = 1.0 - u;
 
-        let hash = self.tree[ptr].hash();
-
-        // mcgs at home
-        if let Some(entry) = self.tree.probe_hash(hash) {
-            if self.tree.edge(parent, action).visits() < entry.visits {
-                self.tree
-                    .edge_mut(parent, action)
-                    .set_stats(entry.visits, entry.wins);
-            }
-
-            self.tree.edge_mut(parent, action).update(u);
-            let edge = *self.tree.edge(parent, action);
+        self.tree.edge_mut(parent, action).update(u);
+        let edge = self.tree.edge(parent, action);
+        if edge.visits() > self.tree.check_hash_visits(hash) {
             self.tree.push_hash(hash, edge.visits(), edge.wins());
-        } else {
-            let edge = self.tree.edge_mut(parent, action);
-            edge.update(u);
-
-            let visits = edge.visits();
-            let wins = edge.wins();
-
-            self.tree.push_hash(hash, visits, wins);
         }
 
         // if the child node resulted in a loss, then

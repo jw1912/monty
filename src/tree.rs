@@ -43,7 +43,7 @@ impl Tree {
     fn new(cap: usize) -> Self {
         let mut tree = Self {
             tree: vec![Node::new(GameState::Ongoing, 0, -1, 0); cap / 8],
-            hash: HashTable::new(cap / 8),
+            hash: HashTable::new(cap / 16),
             root: -1,
             empty: 0,
             used: 0,
@@ -98,6 +98,10 @@ impl Tree {
 
     pub fn push_hash(&mut self, hash: u64, visits: i32, wins: f32) {
         self.hash.push(hash, visits, wins);
+    }
+
+    pub fn check_hash_visits(&self, hash: u64) -> i32 {
+        self.hash.visits(hash)
     }
 
     pub fn delete(&mut self, ptr: i32) {
