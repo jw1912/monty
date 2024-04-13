@@ -96,12 +96,18 @@ impl Tree {
         self.hash.get(hash)
     }
 
-    pub fn push_hash(&mut self, hash: u64, visits: i32, wins: f32) {
-        self.hash.push(hash, visits, wins);
+    pub fn push_hash(&mut self, hash: u64, visits: i32, wins: f32, ptr: i32) {
+        self.hash.push(hash, visits, wins, ptr);
     }
 
     pub fn check_hash_visits(&self, hash: u64) -> i32 {
-        self.hash.visits(hash)
+        let entry = self.hash.fetch(hash);
+        if self[entry.ptr].hash() != entry.hash {
+            -1
+        } else {
+            entry.visits
+        }
+
     }
 
     pub fn delete(&mut self, ptr: i32) {

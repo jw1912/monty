@@ -189,7 +189,7 @@ impl<T: GameRep> Searcher<T> {
         self.tree.edge_mut(parent, action).update(u);
         let edge = self.tree.edge(parent, action);
         if edge.visits() > self.tree.check_hash_visits(hash) {
-            self.tree.push_hash(hash, edge.visits(), edge.wins());
+            self.tree.push_hash(hash, edge.visits(), edge.wins(), edge.ptr());
         }
 
         // if the child node resulted in a loss, then
