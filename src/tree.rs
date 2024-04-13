@@ -102,7 +102,7 @@ impl Tree {
 
     pub fn check_hash_visits(&self, hash: u64) -> i32 {
         let entry = self.hash.fetch(hash);
-        if self[entry.ptr].hash() != entry.hash {
+        if entry.ptr == -1 || self[entry.ptr].hash() != entry.hash {
             -1
         } else {
             entry.visits
