@@ -3,7 +3,6 @@ pub struct HashEntry {
     pub hash: u64,
     pub visits: i32,
     pub wins: f32,
-    pub ptr: i32,
 }
 
 impl Default for HashEntry {
@@ -12,7 +11,6 @@ impl Default for HashEntry {
             hash: 0,
             visits: 0,
             wins: 0.0,
-            ptr: 0,
         }
     }
 }
@@ -47,13 +45,12 @@ impl HashTable {
         }
     }
 
-    pub fn push(&mut self, hash: u64, visits: i32, wins: f32, ptr: i32) {
+    pub fn push(&mut self, hash: u64, visits: i32, wins: f32) {
         let idx = hash % (self.table.len() as u64);
         self.table[idx as usize] = HashEntry {
             hash,
             visits,
             wins,
-            ptr,
         };
     }
 }

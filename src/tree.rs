@@ -96,13 +96,13 @@ impl Tree {
         self.hash.get(hash)
     }
 
-    pub fn push_hash(&mut self, hash: u64, visits: i32, wins: f32, ptr: i32) {
-        self.hash.push(hash, visits, wins, ptr);
+    pub fn push_hash(&mut self, hash: u64, visits: i32, wins: f32) {
+        self.hash.push(hash, visits, wins);
     }
 
     pub fn check_hash_visits(&self, hash: u64) -> i32 {
         let entry = self.hash.fetch(hash);
-        if entry.ptr == -1 || self[entry.ptr].hash() != entry.hash {
+        if hash != entry.hash {
             -1
         } else {
             entry.visits
