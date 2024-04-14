@@ -129,15 +129,6 @@ impl<T: GameRep> Searcher<T> {
         let parent = self.tree[ptr].parent();
         let action = self.tree[ptr].action();
 
-        // mcgs at home
-        if let Some(entry) = self.tree.probe_hash(hash) {
-            if self.tree.edge(parent, action).visits() < entry.visits {
-                self.tree
-                    .edge_mut(parent, action)
-                    .set_stats(entry.visits, entry.wins);
-            }
-        }
-
         let mut u;
         let child_state;
         let pvisits = self.tree.edge(parent, action).visits();
@@ -145,6 +136,13 @@ impl<T: GameRep> Searcher<T> {
         if self.tree[ptr].is_terminal() || pvisits == 0 {
             child_state = GameState::Ongoing;
             u = self.get_utility(ptr, pos);
+
+            // mcgs at home
+            if self.tree[ptr].state() == GameState::Ongoing {
+                if let Some(entry) = self.tree.probe_hash(hash) {
+                    self.tree.edge_mut(parent, action).set_stats(entry.visits, entry.wins);
+                }
+            }
         } else {
             // this is "expanding on the second visit",
             // an important optimisation - not only does it
