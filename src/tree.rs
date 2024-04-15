@@ -227,7 +227,7 @@ impl Tree {
         let t = Instant::now();
 
         if self.is_empty() {
-            let node = self.push(Node::new(GameState::Ongoing, 0, -1, 0));
+            let node = self.push(Node::new(GameState::Ongoing, root.hash(), -1, 0));
             self.make_root_node(node);
 
             return;
@@ -256,7 +256,7 @@ impl Tree {
 
         if !found {
             println!("info string no subtree found");
-            let node = self.push(Node::new(GameState::Ongoing, 0, -1, 0));
+            let node = self.push(Node::new(GameState::Ongoing, root.hash(), -1, 0));
             self.make_root_node(node);
         }
 
