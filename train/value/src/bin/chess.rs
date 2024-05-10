@@ -112,8 +112,8 @@ impl inputs::InputType for ThreatInputs {
 
         let board = Board::from_raw(bb, false, 0, 0, 0);
 
-        let threats = board.threats_by(0);
-        let defences = board.threats_by(1);
+        let threats = board.threats_by(1);
+        let defences = board.threats_by(0);
 
         ThreatInputsIter {
             board_iter: pos.into_iter(),

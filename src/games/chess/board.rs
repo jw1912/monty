@@ -225,14 +225,17 @@ impl Board {
         }
     }
 
-    #[must_use]
     pub fn threats(&self) -> u64 {
+        self.threats_by(self.stm() ^ 1)
+    }
+
+    #[must_use]
+    pub fn threats_by(&self, side: usize) -> u64 {
         let mut threats = 0;
 
-        let king = self.piece(Piece::KING) & self.boys();
+        let king = self.piece(Piece::KING) & self.bb[side ^ 1];
         let occ = self.occ() ^ king;
 
-        let side = self.stm() ^ 1;
         let opps = self.bb[side];
 
         let queens = self.bb[Piece::QUEEN];
