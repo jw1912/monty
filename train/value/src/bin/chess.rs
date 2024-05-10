@@ -8,7 +8,7 @@ const HIDDEN_SIZE: usize = 512;
 fn main() {
     let mut trainer = TrainerBuilder::default()
         .single_perspective()
-        .input(inputs::ChessBucketsMirrored::new([0; 32]))
+        .input(ThreatInputs)
         .output_buckets(outputs::Single)
         .feature_transformer(HIDDEN_SIZE)
         .activate(Activation::SCReLU)
@@ -109,7 +109,6 @@ impl inputs::InputType for ThreatInputs {
             bb[usize::from(2 + (pc & 7))] ^= bit;
         }
 
-
         let board = Board::from_raw(bb, false, 0, 0, 0);
 
         let threats = board.threats_by(1);
@@ -142,17 +141,13 @@ impl Iterator for ThreatInputsIter {
 
                 let feat = [0, 384][c] + pc + (sq ^ usize::from(self.flip));
 
-                let mut f = feat;
-
                 if self.threats & (1 << sq) > 0 {
-                    f += 768;
-                    self.buffer[usize::from(self.in_buffer)] = f;
+                    self.buffer[usize::from(self.in_buffer)] = feat + 768;
                     self.in_buffer += 1;
                 }
 
                 if self.defences & (1 << sq) > 0 {
-                    f += 768;
-                    self.buffer[usize::from(self.in_buffer)] = f;
+                    self.buffer[usize::from(self.in_buffer)] = feat + 768 * 2;
                     self.in_buffer += 1;
                 }
 
