@@ -12,14 +12,29 @@
 ## Compiling
 You need a network file, and run the following command
 ```
-make <name of game> EVALFILE=<relative path to network file>
+make <name of game (lowercase)> EXE=<output path> EVALFILE=<path to network file>
 ```
-to compile monty for the given game.
+to compile monty for the given game (chess, ataxx, shatranj).
 
-## Supported Games
-- Ataxx
-- Chess
-- Shatranj
+## Originality Status
+
+The first version (0.1.0) used external data for value networks and self-generated policy data. The networks were then reset
+completely, and all future versions are trained exclusively on monty's own data, generated from scratch with uniform policy
+and material counting value.
+
+## Credits
+Thanks to everyone at SWE as usual, in particular Cosmo (Viri) and Zuppa (Alexandria), for helping with data generation, and Plutie, for running an LTC tune.
+
+## ELO
+
+<div align="center">
+
+|                           Version                                |     Release Date     | CCRL 40/15 | CCRL Blitz | CCRL FRC | Notes |
+| :------------------------------------------------------------:|:-------------------:|:----:|:----:|:----:|:---------------------------:|
+| [1.0.0](https://github.com/jw1912/monty/releases/tag/v1.0.0) | 28th May 2024 | TBD | TBD | TBD | First Release |
+| [0.1.0](https://github.com/jw1912/monty/releases/tag/v0.1.0) | 26th March 2024 | - | - | 2974 | First Release |
+
+</div>
 
 ## How it works
 
