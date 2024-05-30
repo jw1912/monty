@@ -229,13 +229,12 @@ impl<'a, T: GameRep> Searcher<'a, T> {
         let action = node.action();
         let edge = self.tree.edge(parent, action);
 
-        let mut cpuct = if is_root {
+        let cpuct_scale = 1.0 + (((edge.visits() + 8192) / 8192) as f32).ln();
+        let cpuct = if is_root {
             self.params.root_cpuct()
         } else {
-            self.params.cpuct()
+            self.params.cpuct() * cpuct_scale
         };
-
-        cpuct *= 1.0 + (((edge.visits() + 8192) / 8192) as f32).ln();
 
         // exploration factor to apply
         let expl = cpuct * (edge.visits().max(1) as f32).sqrt();
