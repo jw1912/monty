@@ -199,35 +199,9 @@ impl<'a, T: GameRep> Searcher<'a, T> {
         let edge = self.tree.edge(parent, action);
         self.tree.push_hash(hash, edge.visits(), edge.wins());
 
-        // proving mate scores
-        match child_state {
-            // if the child node resulted in a loss, then
-            // this node has a guaranteed win
-            GameState::Lost(n) => self.tree[ptr].set_state(GameState::Won(n + 1)),
-            // if the child node resulted in a win, then check if there are
-            // any non-won children, and if not, guaranteed loss for this node
-            GameState::Won(n) => {
-                let mut proven_loss = true;
-                let mut max_win_len = n;
-                for action in self.tree[ptr].actions() {
-                    if action.ptr() == -1 {
-                        proven_loss = false;
-                        break;
-                    } else if let GameState::Won(n) = self.tree[action.ptr()].state() {
-                        max_win_len = n.max(max_win_len);
-                    } else {
-                        proven_loss = false;
-                        break;
-                    }
-                }
-
-                if proven_loss {
-                    self.tree[ptr].set_state(GameState::Lost(max_win_len + 1));
-                }
-            }
-            // nothing to do otherwise
-            _ => {}
-        }
+        // potentially propogate proven mate scores
+        // if the child state is terminal
+        self.tree.propogate_proven_mates(ptr, child_state);
 
         // mark this node as most recently used
         self.tree.make_recently_used(ptr);
