@@ -199,10 +199,34 @@ impl<'a, T: GameRep> Searcher<'a, T> {
         let edge = self.tree.edge(parent, action);
         self.tree.push_hash(hash, edge.visits(), edge.wins());
 
-        // if the child node resulted in a loss, then
-        // this node has a guaranteed win
-        if let GameState::Lost(n) = child_state {
-            self.tree[ptr].set_state(GameState::Won(n + 1));
+        // proving mate scores
+        match child_state {
+            // if the child node resulted in a loss, then
+            // this node has a guaranteed win
+            GameState::Lost(n) => self.tree[ptr].set_state(GameState::Won(n + 1)),
+            // if the child node resulted in a win, then check if there are
+            // any non-won children, and if not, guaranteed loss for this node
+            GameState::Won(n) => {
+                let mut proven_loss = true;
+                let mut max_win_len = n;
+                for action in self.tree[ptr].actions() {
+                    if action.ptr() == -1 {
+                        proven_loss = false;
+                        break;
+                    } else if let GameState::Won(n) = self.tree[action.ptr()].state() {
+                        max_win_len = n.max(max_win_len);
+                    } else {
+                        proven_loss = false;
+                        break;
+                    }
+                }
+
+                if proven_loss {
+                    self.tree[ptr].set_state(GameState::Lost(max_win_len + 1));
+                }
+            }
+            // nothing to do otherwise
+            _ => {}
         }
 
         // mark this node as most recently used
@@ -220,7 +244,7 @@ impl<'a, T: GameRep> Searcher<'a, T> {
         }
     }
 
-    fn pick_action(&mut self, ptr: i32) -> usize {
+    fn pick_action(&self, ptr: i32) -> usize {
         if !self.tree[ptr].has_children() {
             panic!("trying to pick from no children!");
         }
@@ -247,29 +271,14 @@ impl<'a, T: GameRep> Searcher<'a, T> {
         // moves which have no been played yet
         let fpu = 1.0 - edge.q();
 
-        let mut proven_loss = true;
-        let mut win_len = 0;
         let mut best = 0;
         let mut max = f32::NEG_INFINITY;
 
         // return child with highest PUCT score
         for (i, action) in node.actions().iter().enumerate() {
             let puct = if action.visits() == 0 {
-                proven_loss = false;
                 fpu + expl * action.policy()
             } else {
-                if action.ptr() != -1 {
-                    let child = &self.tree[action.ptr()];
-
-                    if let GameState::Won(n) = child.state() {
-                        win_len = n.max(win_len);
-                    } else {
-                        proven_loss = false;
-                    }
-                } else {
-                    proven_loss = false;
-                }
-
                 action.q() + expl * action.policy() / (1 + action.visits()) as f32
             };
 
@@ -277,13 +286,6 @@ impl<'a, T: GameRep> Searcher<'a, T> {
                 max = puct;
                 best = i;
             }
-        }
-
-        // all child nodes lead to a forced loss, so we
-        // can propogate a terminal loss
-        if proven_loss {
-            self.tree[ptr].set_state(GameState::Lost(win_len + 1));
-            return usize::MAX;
         }
 
         best
