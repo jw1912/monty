@@ -198,15 +198,23 @@ impl<'a, T: GameRep> Searcher<'a, T> {
         let action = node.action();
         let edge = self.tree.edge(parent, action);
 
-        // scale CPUCT as visits increase
-        let cpuct_scale = 1.0 + (((edge.visits() + 8192) / 8192) as f32).ln();
+        // baseline CPUCT value
         let cpuct_base = if self.datagen && ptr == self.tree.root_node() {
             self.params.root_cpuct()
         } else {
             self.params.cpuct()
         };
 
-        let cpuct = cpuct_base * cpuct_scale;
+        // scale CPUCT as visits increase
+        let cpuct_scale = 1.0 + (((edge.visits() + 8192) / 8192) as f32).ln();
+
+        // scale CPUCT with variance of Q
+        let mut cpuct_var_factor = 1.0;
+        if edge.visits() > 1 {
+            cpuct_var_factor += 0.35 * (edge.var().sqrt() / 0.4 - 1.0);
+        }
+
+        let cpuct = cpuct_base * cpuct_scale * cpuct_var_factor;
 
         // exploration factor to apply
         let expl = cpuct * (edge.visits().max(1) as f32).sqrt();
