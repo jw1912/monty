@@ -28,8 +28,7 @@ fn main() {
 
     // value data params
     params.set("root_pst", 2.62);
-    params.set("root_cpuct", 1.08);
-    params.set("cpuct", 0.54);
+    params.set("cpuct", 1.08);
 
     run_datagen::<Chess, 112>(
         params,
