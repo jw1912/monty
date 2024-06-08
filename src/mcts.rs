@@ -202,11 +202,7 @@ impl<'a, T: GameRep> Searcher<'a, T> {
         let expl = cpuct * (edge.visits().max(1) as f32).sqrt();
 
         self.tree.get_best_child_by_key(ptr, |action| {
-            let q = if action.visits() == 0 {
-                fpu
-            } else {
-                action.q()
-            };
+            let q = SearchHelpers::get_action_value(action, fpu);
             let u = expl * action.policy() / (1 + action.visits()) as f32;
 
             q + u

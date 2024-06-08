@@ -22,4 +22,12 @@ impl SearchHelpers {
     pub fn get_fpu(parent: &Edge) -> f32 {
         1.0 - parent.q()
     }
+
+    pub fn get_action_value(action: &Edge, fpu: f32) -> f32 {
+        if action.visits() == 0 {
+            fpu
+        } else {
+            action.q()
+        }
+    }
 }
